@@ -29,6 +29,12 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'level' => 1,
+            'xp' => 0,
+            'tokens' => 0,
+            'inventory_slots' => 5,
+            'is_bot' => false,
+            'is_admin' => false,
             'remember_token' => Str::random(10),
         ];
     }
@@ -40,6 +46,26 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Mark the user as an administrator.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => true,
+        ]);
+    }
+
+    /**
+     * Mark the user as a bot profile.
+     */
+    public function bot(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_bot' => true,
         ]);
     }
 }
