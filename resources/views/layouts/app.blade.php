@@ -56,7 +56,7 @@
                                 </span>
 
                                 @if (Auth::user()->is_admin)
-                                    <a href="{{ route('admin.dashboard') }}" class="rounded-md border border-amber-500/50 px-3 py-2 text-amber-200 hover:bg-amber-500/10">
+                                    <a href="{{ route('filament.admin.pages.dashboard') }}" class="rounded-md border border-amber-500/50 px-3 py-2 text-amber-200 hover:bg-amber-500/10">
                                         Админ
                                     </a>
                                 @endif

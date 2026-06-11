@@ -1,0 +1,88 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\CreatureSpeciesFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+#[Fillable([
+    'creature_type_id',
+    'name',
+    'code',
+    'description',
+    'rarity',
+    'base_strength',
+    'base_perception',
+    'base_endurance',
+    'base_charisma',
+    'base_intelligence',
+    'base_agility',
+    'base_luck',
+    'is_starter_available',
+    'is_active',
+])]
+class CreatureSpecies extends Model
+{
+    /** @use HasFactory<CreatureSpeciesFactory> */
+    use HasFactory;
+
+    public const SPECIAL_FIELDS = [
+        'base_strength',
+        'base_perception',
+        'base_endurance',
+        'base_charisma',
+        'base_intelligence',
+        'base_agility',
+        'base_luck',
+    ];
+
+    public const RARITIES = [
+        'common' => 'Обычный',
+        'rare' => 'Редкий',
+        'elite' => 'Элитный',
+        'unique' => 'Уникальный',
+    ];
+
+    /**
+     * @return BelongsTo<CreatureType, $this>
+     */
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(CreatureType::class, 'creature_type_id');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'base_strength' => 'integer',
+            'base_perception' => 'integer',
+            'base_endurance' => 'integer',
+            'base_charisma' => 'integer',
+            'base_intelligence' => 'integer',
+            'base_agility' => 'integer',
+            'base_luck' => 'integer',
+            'is_starter_available' => 'boolean',
+            'is_active' => 'boolean',
+        ];
+    }
+
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->where('is_active', true);
+    }
+
+    #[Scope]
+    protected function starterAvailable(Builder $query): void
+    {
+        $query->where('is_starter_available', true);
+    }
+}

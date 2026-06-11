@@ -26,8 +26,4 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/arena', [GamePageController::class, 'arena'])->name('arena');
     Route::get('/shop', [GamePageController::class, 'shop'])->name('shop');
     Route::get('/inventory', [GamePageController::class, 'inventory'])->name('inventory');
-
-    Route::get('/admin', [GamePageController::class, 'admin'])
-        ->middleware('admin')
-        ->name('admin.dashboard');
 });

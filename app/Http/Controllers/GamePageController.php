@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CreatureType;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,14 @@ class GamePageController extends Controller
 
     public function entities(): View
     {
-        return view('game.entities');
+        return view('game.entities', [
+            'creatureTypes' => CreatureType::query()
+                ->active()
+                ->with(['species' => fn ($query) => $query->active()->orderBy('name')])
+                ->withCount(['species' => fn ($query) => $query->active()])
+                ->orderBy('name')
+                ->get(),
+        ]);
     }
 
     public function arena(): View
@@ -36,8 +44,4 @@ class GamePageController extends Controller
         ]);
     }
 
-    public function admin(): View
-    {
-        return view('admin.index');
-    }
 }

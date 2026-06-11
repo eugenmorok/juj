@@ -16,9 +16,9 @@ class AdminRoleTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)
-            ->get(route('admin.dashboard'))
+            ->get(route('filament.admin.pages.dashboard'))
             ->assertOk()
-            ->assertSee('Админ-панель');
+            ->assertSee('Dashboard');
     }
 
     public function test_regular_user_cannot_open_admin_page(): void
@@ -26,7 +26,7 @@ class AdminRoleTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('admin.dashboard'))
+            ->get(route('filament.admin.pages.dashboard'))
             ->assertForbidden();
     }
 
