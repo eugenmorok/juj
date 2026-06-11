@@ -48,12 +48,43 @@ class CreatureSpecies extends Model
         'unique' => 'Уникальный',
     ];
 
+    public const BASE_TO_CREATURE_ATTRIBUTES = [
+        'strength' => 'base_strength',
+        'perception' => 'base_perception',
+        'endurance' => 'base_endurance',
+        'charisma' => 'base_charisma',
+        'intelligence' => 'base_intelligence',
+        'agility' => 'base_agility',
+        'luck' => 'base_luck',
+    ];
+
     /**
      * @return BelongsTo<CreatureType, $this>
      */
     public function type(): BelongsTo
     {
         return $this->belongsTo(CreatureType::class, 'creature_type_id');
+    }
+
+    public function baseSpecialValue(string $attribute): int
+    {
+        $baseAttribute = self::BASE_TO_CREATURE_ATTRIBUTES[$attribute] ?? null;
+
+        return $baseAttribute === null ? 0 : (int) $this->{$baseAttribute};
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function baseSpecialValues(): array
+    {
+        $values = [];
+
+        foreach (self::BASE_TO_CREATURE_ATTRIBUTES as $attribute => $baseAttribute) {
+            $values[$attribute] = (int) $this->{$baseAttribute};
+        }
+
+        return $values;
     }
 
     /**

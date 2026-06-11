@@ -65,7 +65,9 @@ body {
 
 a,
 button,
-input {
+input,
+select,
+textarea {
     transition:
         background-color 160ms ease,
         border-color 160ms ease,
@@ -182,13 +184,17 @@ input {
     color: var(--arena-text) !important;
 }
 
-[data-theme] input {
+[data-theme] input,
+[data-theme] select,
+[data-theme] textarea {
     background-color: var(--arena-panel-strong) !important;
     border-color: var(--arena-border-soft) !important;
     color: var(--arena-text) !important;
 }
 
-[data-theme='light'] input {
+[data-theme='light'] input,
+[data-theme='light'] select,
+[data-theme='light'] textarea {
     background-color: #fff9e9 !important;
 }
 

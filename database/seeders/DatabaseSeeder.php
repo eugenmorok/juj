@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(CreatureCatalogSeeder::class);
+        $this->call(SkillSeeder::class);
 
         if (app()->environment('production') && ! env('ADMIN_PASSWORD')) {
             return;
