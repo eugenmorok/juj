@@ -7,6 +7,14 @@
 
         <title>{{ $title ?? config('app.name', 'RPG Arena') }}</title>
 
+        <script>
+            try {
+                document.documentElement.dataset.theme = localStorage.getItem('rpg-arena-theme') || 'dark';
+            } catch {
+                document.documentElement.dataset.theme = 'dark';
+            }
+        </script>
+
         @fonts
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -32,6 +40,16 @@
                         </a>
 
                         <div class="flex flex-wrap items-center gap-3 text-sm">
+                            <button
+                                type="button"
+                                data-theme-toggle
+                                class="theme-toggle inline-flex items-center gap-2 rounded-md px-3 py-2"
+                                aria-pressed="false"
+                            >
+                                <span class="theme-toggle-dot h-2.5 w-2.5 rounded-full"></span>
+                                <span data-theme-toggle-label>Тёмная</span>
+                            </button>
+
                             @auth
                                 <span class="rounded-md border border-zinc-800 px-3 py-2 text-zinc-300">
                                     {{ Auth::user()->name }}

@@ -7,3 +7,212 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+:root,
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --arena-bg: #26352e;
+    --arena-bg-deep: #1e2924;
+    --arena-bg-line: rgba(168, 196, 127, 0.07);
+    --arena-panel: #324336;
+    --arena-panel-strong: #25362f;
+    --arena-panel-soft: #3b4b3a;
+    --arena-border: #758154;
+    --arena-border-soft: rgba(164, 174, 104, 0.42);
+    --arena-text: #f0e6c4;
+    --arena-text-muted: #c3bc92;
+    --arena-text-soft: #9fa783;
+    --arena-accent: #b4c95c;
+    --arena-accent-strong: #d8c062;
+    --arena-accent-text: #1e2924;
+    --arena-warn: #c7924f;
+    --arena-danger: #d27354;
+    --arena-shadow: 0 18px 50px rgba(12, 20, 16, 0.22);
+}
+
+:root[data-theme='light'] {
+    color-scheme: light;
+    --arena-bg: #ead8b4;
+    --arena-bg-deep: #d9bd86;
+    --arena-bg-line: rgba(97, 61, 34, 0.07);
+    --arena-panel: #fff3d8;
+    --arena-panel-strong: #f6e4bd;
+    --arena-panel-soft: #ecd09d;
+    --arena-border: #9f7444;
+    --arena-border-soft: rgba(123, 78, 42, 0.38);
+    --arena-text: #332719;
+    --arena-text-muted: #6d5637;
+    --arena-text-soft: #806742;
+    --arena-accent: #2f7668;
+    --arena-accent-strong: #9b442f;
+    --arena-accent-text: #fff7df;
+    --arena-warn: #a4772a;
+    --arena-danger: #9b3b2f;
+    --arena-shadow: 0 18px 45px rgba(77, 49, 23, 0.16);
+}
+
+html {
+    background: var(--arena-bg);
+}
+
+body {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 36rem),
+        repeating-linear-gradient(0deg, transparent 0, transparent 7px, var(--arena-bg-line) 8px),
+        linear-gradient(135deg, var(--arena-bg), var(--arena-bg-deep));
+    color: var(--arena-text);
+}
+
+a,
+button,
+input {
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+::selection {
+    background: var(--arena-accent);
+    color: var(--arena-accent-text);
+}
+
+[data-theme] .bg-zinc-950,
+[data-theme] .bg-zinc-950\/95 {
+    background-color: color-mix(in srgb, var(--arena-bg-deep) 92%, transparent) !important;
+}
+
+[data-theme] .bg-zinc-900 {
+    background-color: var(--arena-panel) !important;
+}
+
+[data-theme] .bg-zinc-800 {
+    background-color: var(--arena-panel-strong) !important;
+}
+
+[data-theme] .border-zinc-800,
+[data-theme] .border-zinc-700,
+[data-theme] .border-zinc-600 {
+    border-color: var(--arena-border-soft) !important;
+}
+
+[data-theme] .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--arena-border-soft) !important;
+}
+
+[data-theme] .text-zinc-100,
+[data-theme] .text-zinc-200,
+[data-theme] .text-white {
+    color: var(--arena-text) !important;
+}
+
+[data-theme] .text-zinc-300 {
+    color: var(--arena-text-muted) !important;
+}
+
+[data-theme] .text-zinc-400,
+[data-theme] .text-zinc-500 {
+    color: var(--arena-text-soft) !important;
+}
+
+[data-theme] .text-zinc-950 {
+    color: var(--arena-accent-text) !important;
+}
+
+[data-theme] .bg-emerald-500 {
+    background-color: var(--arena-accent) !important;
+}
+
+[data-theme] .hover\:bg-emerald-400:hover,
+[data-theme] .hover\:bg-zinc-900:hover {
+    background-color: var(--arena-accent-strong) !important;
+    color: var(--arena-accent-text) !important;
+}
+
+[data-theme] .hover\:text-white:hover,
+[data-theme] .hover\:text-zinc-700:hover {
+    color: var(--arena-text) !important;
+}
+
+[data-theme] .text-emerald-300,
+[data-theme] .focus\:border-emerald-400:focus {
+    color: var(--arena-accent-strong) !important;
+    border-color: var(--arena-accent-strong) !important;
+}
+
+[data-theme] .hover\:border-emerald-500\/60:hover,
+[data-theme] .border-emerald-500\/40 {
+    border-color: color-mix(in srgb, var(--arena-accent) 68%, transparent) !important;
+}
+
+[data-theme] .bg-emerald-500\/10 {
+    background-color: color-mix(in srgb, var(--arena-accent) 14%, transparent) !important;
+}
+
+[data-theme] .text-emerald-100 {
+    color: var(--arena-text) !important;
+}
+
+[data-theme] .text-amber-100,
+[data-theme] .text-amber-200,
+[data-theme] .text-amber-300 {
+    color: var(--arena-warn) !important;
+}
+
+[data-theme] .border-amber-500\/30,
+[data-theme] .border-amber-500\/50 {
+    border-color: color-mix(in srgb, var(--arena-warn) 58%, transparent) !important;
+}
+
+[data-theme] .bg-amber-500\/10,
+[data-theme] .hover\:bg-amber-500\/10:hover {
+    background-color: color-mix(in srgb, var(--arena-warn) 14%, transparent) !important;
+}
+
+[data-theme] .border-red-500\/40 {
+    border-color: color-mix(in srgb, var(--arena-danger) 62%, transparent) !important;
+}
+
+[data-theme] .bg-red-500\/10 {
+    background-color: color-mix(in srgb, var(--arena-danger) 13%, transparent) !important;
+}
+
+[data-theme] .text-red-100 {
+    color: var(--arena-text) !important;
+}
+
+[data-theme] input {
+    background-color: var(--arena-panel-strong) !important;
+    border-color: var(--arena-border-soft) !important;
+    color: var(--arena-text) !important;
+}
+
+[data-theme='light'] input {
+    background-color: #fff9e9 !important;
+}
+
+[data-theme] .shadow-theme,
+[data-theme] .rounded-md.border {
+    box-shadow: var(--arena-shadow);
+}
+
+.theme-toggle {
+    border: 1px solid var(--arena-border-soft);
+    background: color-mix(in srgb, var(--arena-panel) 82%, transparent);
+    color: var(--arena-text);
+}
+
+.theme-toggle:hover {
+    border-color: var(--arena-accent);
+    background: var(--arena-panel-strong);
+}
+
+.theme-toggle-dot {
+    background: var(--arena-accent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--arena-accent-text) 22%, transparent);
+}
+
+[data-theme='light'] .theme-toggle-dot {
+    background: var(--arena-accent-strong);
+}
