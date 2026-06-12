@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(CreatureCatalogSeeder::class);
         $this->call(SkillSeeder::class);
+        $this->call(EquipmentSlotSeeder::class);
+        $this->call(ItemSeeder::class);
 
         if (app()->environment('production') && ! env('ADMIN_PASSWORD')) {
             return;
