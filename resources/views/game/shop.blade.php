@@ -21,7 +21,18 @@
         @include('partials.form-errors')
 
         <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
-            <form method="GET" action="{{ route('shop') }}" class="grid gap-3 md:grid-cols-5">
+            <form method="GET" action="{{ route('shop') }}" class="grid gap-3 md:grid-cols-6">
+                <label class="space-y-1 md:col-span-2">
+                    <span class="text-xs uppercase text-zinc-500">Поиск</span>
+                    <input
+                        name="q"
+                        value="{{ $filters['q'] ?? '' }}"
+                        maxlength="80"
+                        placeholder="Название, код или описание"
+                        class="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+                    >
+                </label>
+
                 <label class="space-y-1">
                     <span class="text-xs uppercase text-zinc-500">Категория</span>
                     <select name="item_type" class="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
@@ -64,6 +75,14 @@
                     >
                 </label>
 
+                <label class="space-y-1">
+                    <span class="text-xs uppercase text-zinc-500">Доступность</span>
+                    <select name="available" class="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
+                        <option value="">Все товары</option>
+                        <option value="1" @selected(($filters['available'] ?? '') === '1')>Можно купить сейчас</option>
+                    </select>
+                </label>
+
                 <div class="flex items-end gap-2">
                     <button type="submit" class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-emerald-400">
                         Фильтр
@@ -101,10 +120,10 @@
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <h3 class="text-lg font-semibold text-white">{{ $item->name }}</h3>
-                                        <p class="mt-1 text-xs text-zinc-500">
-                                            {{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}
-                                            / {{ \App\Models\Item::RARITIES[$item->rarity] ?? $item->rarity }}
-                                        </p>
+                                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                                            <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
+                                            @include('partials.rarity-badge', ['item' => $item])
+                                        </div>
                                     </div>
                                     <span class="rounded-md border border-emerald-500/40 px-3 py-1 text-sm text-emerald-100">
                                         {{ $item->price }} ток.

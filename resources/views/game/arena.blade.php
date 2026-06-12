@@ -19,7 +19,7 @@
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="text-xl font-semibold text-white">Быстрый рейтинговый бой</h2>
-                    <p class="mt-1 text-sm text-zinc-400">Подбор учитывает уровень и power score. Боты появятся отдельным спринтом.</p>
+                    <p class="mt-1 text-sm text-zinc-400">Подбор учитывает уровень и power score. Если реальных соперников мало, система подмешает активных ботов.</p>
                 </div>
             </div>
 
@@ -85,7 +85,7 @@
 
             @if ($recentBattles->isEmpty())
                 <div class="rounded-md border border-zinc-800 bg-zinc-900 p-6 text-sm text-zinc-400">
-                    Боёв пока нет.
+                    Боев пока нет.
                 </div>
             @else
                 <div class="space-y-3">
@@ -98,6 +98,12 @@
                                 'loss' => 'Поражение',
                                 'draw' => 'Ничья',
                             ][$ownParticipant?->result] ?? 'Итог';
+                            $resultTone = match ($ownParticipant?->result) {
+                                'win' => 'border-emerald-500/50 text-emerald-100',
+                                'loss' => 'border-rose-500/50 text-rose-100',
+                                'draw' => 'border-amber-500/50 text-amber-100',
+                                default => 'border-zinc-700 text-zinc-200',
+                            };
                         @endphp
                         <a href="{{ route('arena.battles.show', $battle) }}" class="block rounded-md border border-zinc-800 bg-zinc-900 p-4 hover:bg-zinc-900/70">
                             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -109,7 +115,7 @@
                                         {{ $battle->started_at?->format('d.m.Y H:i') }} / seed {{ $battle->seed }}
                                     </p>
                                 </div>
-                                <span class="rounded-md border border-zinc-700 px-3 py-1 text-sm text-zinc-200">
+                                <span class="rounded-md border px-3 py-1 text-sm {{ $resultTone }}">
                                     {{ $resultLabel }}
                                 </span>
                             </div>

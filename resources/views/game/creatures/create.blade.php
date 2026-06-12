@@ -199,7 +199,7 @@
                         </dl>
                     </section>
 
-                    <button type="submit" class="w-full rounded-md bg-emerald-500 px-4 py-3 font-medium text-zinc-950 hover:bg-emerald-400">
+                    <button type="submit" data-creature-submit class="w-full rounded-md bg-emerald-500 px-4 py-3 font-medium text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
                         Создать сущность
                     </button>
                 </aside>
@@ -228,6 +228,7 @@
             const skillsCostNode = root.querySelector('[data-skills-cost]');
             const remainingNode = root.querySelector('[data-remaining-points]');
             const selectedSkillCountNode = root.querySelector('[data-selected-skill-count]');
+            const submitButton = root.querySelector('[data-creature-submit]');
 
             const selectedSpecies = () => species[Number(speciesSelect.value)];
 
@@ -324,8 +325,15 @@
                 selectedSkillCountNode.textContent = selectedSkillCount;
 
                 const remaining = creationPoints - statsCost - skillsCost;
+                const invalid = remaining < 0 || selectedSkillCount > skillLimit;
+
                 remainingNode.textContent = remaining;
-                remainingNode.classList.toggle('text-red-100', remaining < 0 || selectedSkillCount > skillLimit);
+                remainingNode.classList.toggle('text-red-100', invalid);
+                remainingNode.classList.toggle('text-white', !invalid);
+
+                if (submitButton) {
+                    submitButton.disabled = invalid;
+                }
             };
 
             typeSelect?.addEventListener('change', updateSpeciesOptions);

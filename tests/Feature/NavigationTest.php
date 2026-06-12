@@ -12,7 +12,7 @@ class NavigationTest extends TestCase
 
     public function test_guest_is_redirected_from_protected_pages(): void
     {
-        foreach (['dashboard', 'profile', 'entities.index', 'arena', 'shop', 'inventory'] as $route) {
+        foreach (['dashboard', 'profile', 'entities.index', 'arena', 'shop', 'inventory', 'help'] as $route) {
             $this->get(route($route))->assertRedirect(route('login', absolute: false));
         }
     }
@@ -28,6 +28,7 @@ class NavigationTest extends TestCase
             'arena' => 'Арена',
             'shop' => 'Магазин',
             'inventory' => 'Инвентарь',
+            'help' => 'Справка по арене',
         ] as $route => $text) {
             $this->actingAs($user)
                 ->get(route($route))
@@ -47,6 +48,7 @@ class NavigationTest extends TestCase
             ->assertSee('Сущности')
             ->assertSee('Арена')
             ->assertSee('Магазин')
-            ->assertSee('Инвентарь');
+            ->assertSee('Инвентарь')
+            ->assertSee('Справка');
     }
 }

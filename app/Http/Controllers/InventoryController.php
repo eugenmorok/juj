@@ -5,16 +5,25 @@ namespace App\Http\Controllers;
 use App\Models\Creature;
 use App\Models\Inventory;
 use App\Models\InventoryItem;
+use App\Models\Item;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class InventoryController extends Controller
 {
     public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:80'],
+            'item_type' => ['nullable', 'string', Rule::in(array_keys(Item::TYPES))],
+            'rarity' => ['nullable', 'string', Rule::in(array_keys(Item::RARITIES))],
+            'location' => ['nullable', Rule::in(['all', 'player', 'creatures'])],
+        ]);
         $user = $request->user();
         $playerInventory = $user
             ->ensureInventory()
@@ -30,11 +39,22 @@ class InventoryController extends Controller
         });
 
         $creatures->load('inventory.inventoryItems.itemInstance.item');
+        $playerInventoryItems = $this->filteredInventoryItems($playerInventory->inventoryItems, $filters);
+        $creatureInventoryItems = $creatures
+            ->mapWithKeys(fn (Creature $creature): array => [
+                $creature->id => $this->filteredInventoryItems($creature->inventory->inventoryItems, $filters),
+            ]);
+        $location = $filters['location'] ?? 'all';
 
         return view('game.inventory', [
             'user' => $user,
             'playerInventory' => $playerInventory,
+            'playerInventoryItems' => $playerInventoryItems,
+            'creatureInventoryItems' => $creatureInventoryItems,
             'creatures' => $creatures,
+            'filters' => $filters,
+            'showPlayerInventory' => in_array($location, ['all', 'player'], true),
+            'showCreatureInventories' => in_array($location, ['all', 'creatures'], true),
         ]);
     }
 
@@ -142,5 +162,40 @@ class InventoryController extends Controller
                 'state' => 'stored',
             ])->save();
         });
+    }
+
+    /**
+     * @param  Collection<int, InventoryItem>  $items
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, InventoryItem>
+     */
+    private function filteredInventoryItems(Collection $items, array $filters): Collection
+    {
+        $search = mb_strtolower((string) ($filters['q'] ?? ''));
+
+        return $items
+            ->filter(function (InventoryItem $inventoryItem) use ($filters, $search): bool {
+                $item = $inventoryItem->itemInstance?->item;
+
+                if (! $item) {
+                    return false;
+                }
+
+                if (($filters['item_type'] ?? null) && $item->item_type !== $filters['item_type']) {
+                    return false;
+                }
+
+                if (($filters['rarity'] ?? null) && $item->rarity !== $filters['rarity']) {
+                    return false;
+                }
+
+                if ($search !== '' && ! str_contains(mb_strtolower($item->name.' '.$item->code.' '.$item->description), $search)) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->sortBy('slot_number')
+            ->values();
     }
 }

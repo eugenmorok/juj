@@ -65,9 +65,9 @@
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <h4 class="font-semibold text-white">{{ $equippedItem->name }}</h4>
-                                        <p class="mt-1 text-xs text-zinc-400">
-                                            {{ \App\Models\Item::RARITIES[$equippedItem->rarity] ?? $equippedItem->rarity }}
-                                        </p>
+                                        <div class="mt-2">
+                                            @include('partials.rarity-badge', ['item' => $equippedItem])
+                                        </div>
                                     </div>
                                     <form method="POST" action="{{ route('entities.equipment.unequip', [$creature, $equippedInstance]) }}">
                                         @csrf

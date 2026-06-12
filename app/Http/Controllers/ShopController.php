@@ -15,10 +15,12 @@ class ShopController extends Controller
     public function index(Request $request): View
     {
         $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:80'],
             'item_type' => ['nullable', 'string', Rule::in(array_keys(Item::TYPES))],
             'rarity' => ['nullable', 'string', Rule::in(array_keys(Item::RARITIES))],
             'max_price' => ['nullable', 'integer', 'min:0'],
             'level' => ['nullable', 'integer', 'min:1'],
+            'available' => ['nullable', Rule::in(['1'])],
         ]);
 
         $user = $request->user();
@@ -27,10 +29,21 @@ class ShopController extends Controller
 
         $items = Item::query()
             ->active()
+            ->when($filters['q'] ?? null, function ($query, string $search): void {
+                $needle = '%'.mb_strtolower($search).'%';
+
+                $query->where(fn ($items) => $items
+                    ->whereRaw('LOWER(name) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(description) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(code) LIKE ?', [$needle]));
+            })
             ->when($filters['item_type'] ?? null, fn ($query, string $type) => $query->where('item_type', $type))
             ->when($filters['rarity'] ?? null, fn ($query, string $rarity) => $query->where('rarity', $rarity))
             ->when($filters['max_price'] ?? null, fn ($query, int $price) => $query->where('price', '<=', $price))
             ->when($filters['level'] ?? null, fn ($query, int $level) => $query->where('required_level', '<=', $level))
+            ->when(($filters['available'] ?? null) === '1', fn ($query) => $query
+                ->where('required_level', '<=', $user->level)
+                ->where('price', '<=', $user->tokens))
             ->orderBy('price')
             ->orderBy('required_level')
             ->orderBy('name')

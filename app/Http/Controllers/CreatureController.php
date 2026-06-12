@@ -55,7 +55,7 @@ class CreatureController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $attributes = $request->validate($this->creationRules());
+        $attributes = $request->validate($this->creationRules(), $this->creationMessages());
         $species = $this->starterSpecies((int) $attributes['creature_species_id']);
         $skillIds = $this->skillIds($attributes['skills'] ?? []);
         $skills = $this->starterSkills($skillIds);
@@ -186,6 +186,33 @@ class CreatureController extends Controller
         }
 
         return $rules;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function creationMessages(): array
+    {
+        $messages = [
+            'name.required' => 'Укажи имя сущности.',
+            'name.min' => 'Имя сущности должно быть не короче 2 символов.',
+            'name.max' => 'Имя сущности должно быть не длиннее 64 символов.',
+            'creature_species_id.required' => 'Выбери вид сущности.',
+            'creature_species_id.exists' => 'Выбранный вид сущности не найден.',
+            'skills.array' => 'Навыки должны быть переданы списком.',
+            'skills.*.distinct' => 'Один и тот же навык нельзя выбрать дважды.',
+            'skills.*.exists' => 'Один из выбранных навыков не найден.',
+        ];
+
+        foreach (Creature::SPECIAL_ATTRIBUTES as $attribute) {
+            $label = Creature::SPECIAL_LABELS[$attribute] ?? strtoupper($attribute);
+            $messages[$attribute.'.required'] = "Укажи значение {$label}.";
+            $messages[$attribute.'.integer'] = "{$label} должен быть целым числом.";
+            $messages[$attribute.'.min'] = "{$label} не может быть меньше базы выбранного вида.";
+            $messages[$attribute.'.max'] = "{$label} не может быть выше стартового cap ".Creature::STARTER_SPECIAL_CAP.'.';
+        }
+
+        return $messages;
     }
 
     private function starterSpecies(int $speciesId): CreatureSpecies

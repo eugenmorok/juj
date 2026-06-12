@@ -21,4 +21,8 @@ class GamePageController extends Controller
         ]);
     }
 
+    public function help(): View
+    {
+        return view('game.help');
+    }
 }

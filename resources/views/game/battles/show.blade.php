@@ -61,6 +61,13 @@
                         Очки развития: +{{ $participant->reward_development_points }}.
                         Множитель наград: x{{ $participant->reward_multiplier }}.
                     </p>
+                    <div class="mt-4">
+                        @include('partials.progress-bar', [
+                            'value' => $participant->hp_after,
+                            'max' => max(1, $participant->hp_before),
+                            'label' => 'HP после боя',
+                        ])
+                    </div>
                 </article>
             @endforeach
         </section>
@@ -69,10 +76,7 @@
             <h2 class="text-xl font-semibold text-white">Лог боя</h2>
             <div class="mt-4 space-y-2">
                 @foreach ($battle->events as $event)
-                    <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">
-                        <span class="text-zinc-500">R{{ $event->round }}</span>
-                        <span class="ml-2">{{ $event->text_log }}</span>
-                    </div>
+                    @include('game.battles.partials.event-row', ['event' => $event])
                 @endforeach
             </div>
         </section>

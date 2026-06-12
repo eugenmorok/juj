@@ -6,6 +6,7 @@ use App\Models\Creature;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
 use App\Models\Inventory;
+use App\Models\Item;
 use App\Models\ItemInstance;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -168,6 +169,45 @@ class InventoryManagementTest extends TestCase
             ->assertSee('Scout Carrier')
             ->assertSee('Передать')
             ->assertSee('Забрать');
+    }
+
+    public function test_inventory_page_filters_items_by_catalog_fields_and_location(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user, ['name' => 'Tonic Carrier', 'endurance' => 10]);
+        $playerInventory = $user->ensureInventory();
+        $creatureInventory = $creature->ensureInventory();
+        $playerItem = Item::factory()->create([
+            'name' => 'Rust Plate',
+            'item_type' => 'equipment',
+            'rarity' => 'common',
+        ]);
+        $creatureItem = Item::factory()->potion()->create([
+            'name' => 'Rare Tonic',
+            'item_type' => 'potion',
+            'rarity' => 'rare',
+        ]);
+
+        $playerInventory->addItemInstance(ItemInstance::factory()->create([
+            'item_id' => $playerItem->id,
+            'owner_user_id' => $user->id,
+        ]));
+        $creatureInventory->addItemInstance(ItemInstance::factory()->create([
+            'item_id' => $creatureItem->id,
+            'owner_user_id' => $user->id,
+        ]));
+
+        $this->actingAs($user)
+            ->get(route('inventory', [
+                'q' => 'Tonic',
+                'item_type' => 'potion',
+                'rarity' => 'rare',
+                'location' => 'creatures',
+            ]))
+            ->assertOk()
+            ->assertSee('Rare Tonic')
+            ->assertSee('Tonic Carrier')
+            ->assertDontSee('Rust Plate');
     }
 
     /**

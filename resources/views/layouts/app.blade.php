@@ -27,6 +27,7 @@
                 ['label' => 'Арена', 'route' => 'arena'],
                 ['label' => 'Магазин', 'route' => 'shop'],
                 ['label' => 'Инвентарь', 'route' => 'inventory'],
+                ['label' => 'Справка', 'route' => 'help'],
             ];
         @endphp
 

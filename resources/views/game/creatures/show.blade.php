@@ -3,6 +3,7 @@
 @section('content')
     @php
         $creatureInventory = $creature->inventory;
+        $xpToNextLevel = \App\Services\BattleRewardService::xpToNextLevel($creature->level);
     @endphp
 
     <div class="space-y-6">
@@ -43,6 +44,33 @@
             </div>
         </section>
 
+        <section class="grid gap-4 lg:grid-cols-[1fr_1fr_1fr]">
+            <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                @include('partials.progress-bar', ['value' => $creature->xp, 'max' => $xpToNextLevel, 'label' => 'Опыт до следующего уровня', 'tone' => 'sky'])
+                <p class="mt-3 text-xs text-zinc-500">Следующий уровень: {{ $xpToNextLevel }} XP.</p>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                @include('partials.progress-bar', ['value' => $creature->current_hp, 'max' => $creature->effectiveMaxHp(), 'label' => 'Здоровье'])
+                <p class="mt-3 text-xs text-zinc-500">Экипировка уже учтена в максимальном HP.</p>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                <div class="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div>
+                        <div class="text-xs uppercase text-zinc-500">W</div>
+                        <div class="mt-1 text-xl font-semibold text-white">{{ $creature->wins }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs uppercase text-zinc-500">D</div>
+                        <div class="mt-1 text-xl font-semibold text-white">{{ $creature->draws }}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs uppercase text-zinc-500">L</div>
+                        <div class="mt-1 text-xl font-semibold text-white">{{ $creature->losses }}</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         @include('game.creatures.partials.special-summary', ['creature' => $creature])
 
         <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
@@ -66,6 +94,9 @@
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div>
                                     <h3 class="font-semibold text-white">{{ $item->name }}</h3>
+                                    <div class="mt-2">
+                                        @include('partials.rarity-badge', ['item' => $item])
+                                    </div>
                                     <p class="mt-1 text-xs text-zinc-500">
                                         {{ $equipmentRows->pluck('slot.name')->filter()->implode(', ') }}
                                     </p>
@@ -119,6 +150,9 @@
                                     <div class="flex flex-wrap items-start justify-between gap-3">
                                         <div>
                                             <h4 class="font-semibold text-white">{{ $item->name }}</h4>
+                                            <div class="mt-2">
+                                                @include('partials.rarity-badge', ['item' => $item])
+                                            </div>
                                             <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
                                         </div>
                                         <div class="flex flex-wrap gap-2">
@@ -169,6 +203,9 @@
                                     <div class="flex flex-wrap items-start justify-between gap-3">
                                         <div>
                                             <h4 class="font-semibold text-white">{{ $item->name }}</h4>
+                                            <div class="mt-2">
+                                                @include('partials.rarity-badge', ['item' => $item])
+                                            </div>
                                             <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
                                         </div>
                                         <div class="flex flex-wrap gap-2">

@@ -47,4 +47,5 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
     Route::post('/inventory-items/{inventoryItem}/move-to-creature', [InventoryController::class, 'moveToCreature'])->name('inventory-items.move-to-creature');
     Route::post('/inventory-items/{inventoryItem}/move-to-player', [InventoryController::class, 'moveToPlayer'])->name('inventory-items.move-to-player');
+    Route::get('/help', [GamePageController::class, 'help'])->name('help');
 });

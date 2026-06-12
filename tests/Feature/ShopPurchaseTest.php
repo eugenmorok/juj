@@ -60,6 +60,43 @@ class ShopPurchaseTest extends TestCase
         $this->assertSame(1, $inventory->refresh()->inventoryItems()->count());
     }
 
+    public function test_shop_search_and_available_filter_hide_unavailable_items(): void
+    {
+        $user = User::factory()->create(['tokens' => 300, 'level' => 1]);
+        $availableItem = Item::factory()->create([
+            'name' => 'Rare Lens',
+            'rarity' => 'rare',
+            'price' => 120,
+            'required_level' => 1,
+        ]);
+
+        Item::factory()->create([
+            'name' => 'Locked Lens',
+            'rarity' => 'rare',
+            'price' => 120,
+            'required_level' => 3,
+        ]);
+        Item::factory()->create([
+            'name' => 'Costly Lens',
+            'rarity' => 'rare',
+            'price' => 400,
+            'required_level' => 1,
+        ]);
+        Item::factory()->create(['name' => 'Common Plate', 'rarity' => 'common']);
+
+        $this->actingAs($user)
+            ->get(route('shop', [
+                'q' => 'Lens',
+                'rarity' => 'rare',
+                'available' => '1',
+            ]))
+            ->assertOk()
+            ->assertSee($availableItem->name)
+            ->assertDontSee('Locked Lens')
+            ->assertDontSee('Costly Lens')
+            ->assertDontSee('Common Plate');
+    }
+
     public function test_player_cannot_buy_item_without_tokens_or_inventory_space(): void
     {
         $poorUser = User::factory()->create(['tokens' => 10]);
