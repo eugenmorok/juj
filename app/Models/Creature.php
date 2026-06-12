@@ -110,6 +110,14 @@ class Creature extends Model
     }
 
     /**
+     * @return HasMany<BattleParticipant, $this>
+     */
+    public function battleParticipants(): HasMany
+    {
+        return $this->hasMany(BattleParticipant::class);
+    }
+
+    /**
      * @return array<string, int>
      */
     public function specialValues(): array

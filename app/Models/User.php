@@ -77,6 +77,14 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * @return HasMany<BattleParticipant, $this>
+     */
+    public function battleParticipants(): HasMany
+    {
+        return $this->hasMany(BattleParticipant::class);
+    }
+
+    /**
      * @return HasOne<Inventory, $this>
      */
     public function inventory(): HasOne
