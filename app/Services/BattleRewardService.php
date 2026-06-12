@@ -5,18 +5,16 @@ namespace App\Services;
 use App\Models\Battle;
 use App\Models\BattleParticipant;
 use App\Models\Creature;
+use App\Models\ArenaSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class BattleRewardService
 {
-    public const DAILY_FULL_REWARD_LIMIT = 10;
-
-    public const SAME_OPPONENT_FULL_REWARD_LIMIT = 3;
-
     public function apply(Battle $battle): Battle
     {
         return DB::transaction(function () use ($battle): Battle {
+            $settings = ArenaSetting::current();
             $battle = Battle::query()
                 ->with(['participants.creature.user'])
                 ->findOrFail($battle->id);
@@ -34,8 +32,8 @@ class BattleRewardService
             foreach ($participants as $participant) {
                 /** @var BattleParticipant $opponent */
                 $opponent = $participants->firstWhere('id', '!=', $participant->id);
-                $baseRewards = $this->baseRewards($participant, $opponent);
-                $multiplier = $this->rewardMultiplier($battle, $participant, $opponent);
+                $baseRewards = $this->baseRewards($participant, $opponent, $settings);
+                $multiplier = $this->rewardMultiplier($battle, $participant, $opponent, $settings);
                 $rewardXp = (int) floor($baseRewards['xp'] * $multiplier);
                 $rewardDevelopmentPoints = (int) floor($baseRewards['development_points'] * $multiplier);
                 $rewardTokens = (int) floor($baseRewards['tokens'] * $multiplier);
@@ -55,7 +53,7 @@ class BattleRewardService
                     'tokens' => $user->tokens + $rewardTokens,
                 ])->save();
 
-                $this->applyCreatureProgress($creature, $participant->result, $rewardXp, $rewardDevelopmentPoints);
+                $this->applyCreatureProgress($creature, $participant->result, $rewardXp, $rewardDevelopmentPoints, $settings);
 
                 $participant->forceFill([
                     'reward_xp' => $rewardXp,
@@ -73,54 +71,56 @@ class BattleRewardService
         });
     }
 
-    public static function xpToNextLevel(int $level): int
+    public static function xpToNextLevel(int $level, ?ArenaSetting $settings = null): int
     {
-        return (int) ceil(100 * ($level ** 1.5));
+        $settings ??= ArenaSetting::current();
+
+        return (int) ceil($settings->xp_to_next_level_base * ($level ** $settings->xp_to_next_level_exponent));
     }
 
     /**
      * @return array{xp: int, development_points: int, tokens: int}
      */
-    private function baseRewards(BattleParticipant $participant, BattleParticipant $opponent): array
+    private function baseRewards(BattleParticipant $participant, BattleParticipant $opponent, ArenaSetting $settings): array
     {
         $opponentLevel = max(1, $opponent->level_before);
 
         return match ($participant->result) {
             BattleParticipant::RESULT_WIN => [
-                'xp' => 100 * $opponentLevel,
-                'development_points' => 50 * $opponentLevel,
-                'tokens' => 50 * $opponentLevel,
+                'xp' => $settings->win_xp_per_level * $opponentLevel,
+                'development_points' => $settings->win_development_points_per_level * $opponentLevel,
+                'tokens' => $settings->win_tokens_per_level * $opponentLevel,
             ],
             BattleParticipant::RESULT_DRAW => [
-                'xp' => 50 * $opponentLevel,
-                'development_points' => 25 * $opponentLevel,
-                'tokens' => 25 * $opponentLevel,
+                'xp' => $settings->draw_xp_per_level * $opponentLevel,
+                'development_points' => $settings->draw_development_points_per_level * $opponentLevel,
+                'tokens' => $settings->draw_tokens_per_level * $opponentLevel,
             ],
             default => [
-                'xp' => 20 * $opponentLevel,
-                'development_points' => 0,
-                'tokens' => 5 * $opponentLevel,
+                'xp' => $settings->loss_xp_per_level * $opponentLevel,
+                'development_points' => $settings->loss_development_points_per_level * $opponentLevel,
+                'tokens' => $settings->loss_tokens_per_level * $opponentLevel,
             ],
         };
     }
 
-    private function rewardMultiplier(Battle $battle, BattleParticipant $participant, BattleParticipant $opponent): float
+    private function rewardMultiplier(Battle $battle, BattleParticipant $participant, BattleParticipant $opponent, ArenaSetting $settings): float
     {
         $multiplier = 1.0;
 
-        if ($opponent->power_score_before < ($participant->power_score_before * 0.8)) {
-            $multiplier *= 0.5;
+        if ($opponent->power_score_before < ($participant->power_score_before * $settings->weak_opponent_power_ratio)) {
+            $multiplier *= $settings->weak_opponent_reward_multiplier;
         }
 
-        if ($this->sameOpponentBattlesToday($battle, $participant, $opponent) >= self::SAME_OPPONENT_FULL_REWARD_LIMIT) {
-            $multiplier *= 0.5;
+        if ($settings->same_opponent_daily_limit > 0 && $this->sameOpponentBattlesToday($battle, $participant, $opponent) >= $settings->same_opponent_daily_limit) {
+            $multiplier *= $settings->same_opponent_reward_multiplier;
         }
 
-        if ($this->rewardedBattlesToday($battle, $participant) >= self::DAILY_FULL_REWARD_LIMIT) {
-            $multiplier *= 0.25;
+        if ($settings->daily_full_reward_limit > 0 && $this->rewardedBattlesToday($battle, $participant) >= $settings->daily_full_reward_limit) {
+            $multiplier *= $settings->daily_limit_reward_multiplier;
         }
 
-        return max(0.1, round($multiplier, 2));
+        return max($settings->minimum_reward_multiplier, round($multiplier, 2));
     }
 
     private function sameOpponentBattlesToday(Battle $battle, BattleParticipant $participant, BattleParticipant $opponent): int
@@ -149,7 +149,7 @@ class BattleRewardService
             ->count();
     }
 
-    private function applyCreatureProgress(Creature $creature, ?string $result, int $rewardXp, int $rewardDevelopmentPoints): void
+    private function applyCreatureProgress(Creature $creature, ?string $result, int $rewardXp, int $rewardDevelopmentPoints, ArenaSetting $settings): void
     {
         $level = $creature->level;
         $xp = $creature->xp + $rewardXp;
@@ -157,12 +157,12 @@ class BattleRewardService
         $maxHp = $creature->max_hp;
         $currentHp = $creature->current_hp;
 
-        while ($xp >= self::xpToNextLevel($level)) {
-            $xp -= self::xpToNextLevel($level);
+        while ($xp >= self::xpToNextLevel($level, $settings)) {
+            $xp -= self::xpToNextLevel($level, $settings);
             $level++;
-            $developmentPoints += 10;
-            $maxHp += 5;
-            $currentHp += 5;
+            $developmentPoints += $settings->level_up_development_points;
+            $maxHp += $settings->level_up_hp_bonus;
+            $currentHp += $settings->level_up_hp_bonus;
         }
 
         $stats = match ($result) {

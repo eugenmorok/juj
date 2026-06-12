@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ArenaSetting;
 use App\Models\Creature;
 use App\Models\Inventory;
 use App\Models\Item;
@@ -26,7 +27,9 @@ class ShopService
 
     public static function inventorySlotCost(User $user): int
     {
-        return self::INVENTORY_SLOT_BASE_COST + ($user->purchasedInventorySlots() * self::INVENTORY_SLOT_STEP_COST);
+        $settings = ArenaSetting::current();
+
+        return $settings->inventory_slot_base_cost + ($user->purchasedInventorySlots() * $settings->inventory_slot_step_cost);
     }
 
     public function buyItem(User $user, Item $item): ItemInstance
@@ -63,9 +66,10 @@ class ShopService
     {
         return DB::transaction(function () use ($user): int {
             $lockedUser = $this->lockedUser($user);
+            $settings = ArenaSetting::current();
             $purchasedSlots = $lockedUser->purchasedInventorySlots();
 
-            if ($purchasedSlots >= self::MAX_PURCHASED_INVENTORY_SLOTS) {
+            if ($purchasedSlots >= $settings->max_purchased_inventory_slots) {
                 throw ValidationException::withMessages([
                     'inventory' => 'Достигнут лимит купленных ячеек инвентаря.',
                 ]);

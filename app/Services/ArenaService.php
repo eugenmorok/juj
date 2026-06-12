@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ArenaSetting;
 use App\Models\Battle;
 use App\Models\Creature;
 use App\Models\User;
@@ -18,6 +19,7 @@ class ArenaService
     public function startBattle(User $user, Creature $creature): Battle
     {
         $this->ensureCreatureCanFight($user, $creature);
+        $this->ensureDailyBattleLimit($user);
 
         $opponent = $this->findOpponent($creature);
         $battle = $this->battleEngine->run(
@@ -32,6 +34,7 @@ class ArenaService
 
     public function findOpponent(Creature $creature): Creature
     {
+        $settings = ArenaSetting::current();
         $creature->loadMissing(['skills', 'equipmentRows.itemInstance.item']);
         $creaturePower = $this->powerScore->calculate($creature);
 
@@ -65,15 +68,25 @@ class ArenaService
             ]);
         }
 
-        $levelCandidates = $candidates
-            ->filter(fn (Creature $candidate): bool => abs($candidate->level - $creature->level) <= 2)
+        $matchCandidates = $candidates
+            ->filter(fn (Creature $candidate): bool => abs($candidate->level - $creature->level) <= $settings->matchmaking_level_difference)
             ->values();
 
-        if ($levelCandidates->isEmpty()) {
-            $levelCandidates = $candidates;
+        if ($matchCandidates->isEmpty()) {
+            $matchCandidates = $candidates;
         }
 
-        return $levelCandidates
+        if ($settings->matchmaking_power_score_difference > 0) {
+            $powerCandidates = $matchCandidates
+                ->filter(fn (Creature $candidate): bool => abs($this->powerScore->calculate($candidate) - $creaturePower) <= $settings->matchmaking_power_score_difference)
+                ->values();
+
+            if ($powerCandidates->isNotEmpty()) {
+                $matchCandidates = $powerCandidates;
+            }
+        }
+
+        return $matchCandidates
             ->sortBy(fn (Creature $candidate): int => abs($this->powerScore->calculate($candidate) - $creaturePower) + (abs($candidate->level - $creature->level) * 10))
             ->first();
     }
@@ -106,6 +119,26 @@ class ArenaService
         if (! $creature->is_available_for_battle) {
             throw ValidationException::withMessages([
                 'arena' => 'Эта сущность сейчас недоступна для боя.',
+            ]);
+        }
+    }
+
+    private function ensureDailyBattleLimit(User $user): void
+    {
+        $limit = ArenaSetting::current()->daily_battle_limit;
+
+        if ($limit <= 0) {
+            return;
+        }
+
+        $battlesToday = Battle::query()
+            ->whereDate('started_at', today())
+            ->whereHas('participants', fn ($participants) => $participants->where('user_id', $user->id))
+            ->count();
+
+        if ($battlesToday >= $limit) {
+            throw ValidationException::withMessages([
+                'arena' => 'Дневной лимит боев исчерпан.',
             ]);
         }
     }

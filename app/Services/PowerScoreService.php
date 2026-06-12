@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ArenaSetting;
 use App\Models\Creature;
 use App\Models\ItemInstance;
 
@@ -9,21 +10,22 @@ class PowerScoreService
 {
     public function calculate(Creature $creature): int
     {
+        $settings = ArenaSetting::current();
         $creature->loadMissing([
             'skills',
             'equipmentRows.itemInstance.item',
         ]);
 
         $specialScore = array_sum($creature->effectiveSpecialValues());
-        $levelScore = $creature->level * 10;
+        $levelScore = $creature->level * $settings->power_score_level_weight;
         $skillScore = $creature->skills->sum(
             fn ($skill): int => (int) ($skill->pivot?->cost_paid ?: $skill->cost)
-        );
+        ) * $settings->power_score_skill_weight;
         $equipmentScore = $creature->equipmentRows
             ->pluck('itemInstance')
             ->filter()
             ->unique('id')
-            ->sum(fn (ItemInstance $itemInstance): int => $this->itemInstanceScore($itemInstance));
+            ->sum(fn (ItemInstance $itemInstance): int => $this->itemInstanceScore($itemInstance)) * $settings->power_score_equipment_weight;
 
         return max(1, (int) round($specialScore + $levelScore + $skillScore + $equipmentScore));
     }
