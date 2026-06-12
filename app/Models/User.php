@@ -85,6 +85,14 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * @return HasOne<BotProfile, $this>
+     */
+    public function botProfile(): HasOne
+    {
+        return $this->hasOne(BotProfile::class);
+    }
+
+    /**
      * @return HasOne<Inventory, $this>
      */
     public function inventory(): HasOne

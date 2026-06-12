@@ -35,16 +35,33 @@ class ArenaService
         $creature->loadMissing(['skills', 'equipmentRows.itemInstance.item']);
         $creaturePower = $this->powerScore->calculate($creature);
 
-        $candidates = Creature::query()
+        $realCandidates = Creature::query()
             ->where('id', '!=', $creature->id)
             ->where('user_id', '!=', $creature->user_id)
             ->where('is_available_for_battle', true)
+            ->whereHas('user', fn ($query) => $query->where('is_bot', false))
             ->with(['user', 'skills', 'equipmentRows.itemInstance.item'])
             ->get();
 
+        $botCandidates = Creature::query()
+            ->where('id', '!=', $creature->id)
+            ->where('user_id', '!=', $creature->user_id)
+            ->where('is_available_for_battle', true)
+            ->whereHas('user', fn ($query) => $query
+                ->where('is_bot', true)
+                ->whereHas('botProfile', fn ($profile) => $profile
+                    ->where('is_active', true)
+                    ->where('spawn_chance', '>', 0)))
+            ->with(['user.botProfile', 'skills', 'equipmentRows.itemInstance.item'])
+            ->get();
+
+        $candidates = $this->shouldUseBot($realCandidates, $botCandidates)
+            ? $botCandidates
+            : $realCandidates;
+
         if ($candidates->isEmpty()) {
             throw ValidationException::withMessages([
-                'arena' => 'Нет доступных соперников. Боты будут добавлены следующим спринтом.',
+                'arena' => 'Нет доступных соперников. Сгенерируйте активных ботов в админке.',
             ]);
         }
 
@@ -59,6 +76,27 @@ class ArenaService
         return $levelCandidates
             ->sortBy(fn (Creature $candidate): int => abs($this->powerScore->calculate($candidate) - $creaturePower) + (abs($candidate->level - $creature->level) * 10))
             ->first();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Creature>  $realCandidates
+     * @param  \Illuminate\Support\Collection<int, Creature>  $botCandidates
+     */
+    private function shouldUseBot($realCandidates, $botCandidates): bool
+    {
+        if ($botCandidates->isEmpty()) {
+            return false;
+        }
+
+        if ($realCandidates->isEmpty()) {
+            return true;
+        }
+
+        $maxChance = $botCandidates
+            ->map(fn (Creature $creature): int => (int) ($creature->user?->botProfile?->spawn_chance ?? 0))
+            ->max();
+
+        return random_int(1, 100) <= $maxChance;
     }
 
     private function ensureCreatureCanFight(User $user, Creature $creature): void

@@ -31,6 +31,7 @@ class Dashboard extends BaseDashboard
                 ['label' => 'Навыки', 'value' => Skill::query()->count()],
                 ['label' => 'Слоты экипировки', 'value' => EquipmentSlot::query()->count()],
                 ['label' => 'Предметы', 'value' => Item::query()->count()],
+                ['label' => 'Боты', 'value' => User::query()->where('is_bot', true)->count()],
             ],
             'links' => [
                 ['label' => 'Типы сущностей', 'description' => 'Управление основными классами сущностей.', 'route' => 'filament.admin.resources.creature-types.index'],
@@ -38,6 +39,7 @@ class Dashboard extends BaseDashboard
                 ['label' => 'Навыки', 'description' => 'Стоимость, требования и доступность навыков.', 'route' => 'filament.admin.resources.skills.index'],
                 ['label' => 'Слоты экипировки', 'description' => '10 базовых мест, которые занимают предметы сущности.', 'route' => 'filament.admin.resources.equipment-slots.index'],
                 ['label' => 'Предметы', 'description' => 'Редкость, цена, бонусы, ограничения и слоты предметов.', 'route' => 'filament.admin.resources.items.index'],
+                ['label' => 'Боты', 'description' => 'Псевдо игроки, генерация сущностей и частота появления.', 'route' => 'filament.admin.resources.bot-profiles.index'],
             ],
         ];
     }
