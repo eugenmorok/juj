@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CreatureController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\GamePageController;
 use App\Http\Controllers\InventoryController;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +30,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/entities', [CreatureController::class, 'store'])->name('entities.store');
     Route::get('/entities/{creature}', [CreatureController::class, 'show'])->name('entities.show');
     Route::post('/entities/{creature}/skills/{skill}', [CreatureController::class, 'buySkill'])->name('entities.skills.purchase');
+    Route::get('/entities/{creature}/equipment', [EquipmentController::class, 'show'])->name('entities.equipment');
+    Route::post('/entities/{creature}/equipment/{inventoryItem}', [EquipmentController::class, 'equip'])->name('entities.equipment.equip');
+    Route::post('/entities/{creature}/equipment/{itemInstance}/unequip', [EquipmentController::class, 'unequip'])->name('entities.equipment.unequip');
     Route::get('/arena', [GamePageController::class, 'arena'])->name('arena');
     Route::get('/shop', [GamePageController::class, 'shop'])->name('shop');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');

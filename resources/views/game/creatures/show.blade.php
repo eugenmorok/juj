@@ -1,6 +1,10 @@
 @extends('layouts.app', ['title' => $creature->name])
 
 @section('content')
+    @php
+        $creatureInventory = $creature->inventory;
+    @endphp
+
     <div class="space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -8,9 +12,14 @@
                 <h1 class="mt-2 text-3xl font-semibold text-white">{{ $creature->name }}</h1>
                 <p class="mt-1 text-sm text-zinc-400">{{ $creature->type->name }} / {{ $creature->species->name }}</p>
             </div>
-            <a href="{{ route('entities.index') }}" class="rounded-md border border-zinc-700 px-4 py-2 text-zinc-200 hover:bg-zinc-900">
-                К списку
-            </a>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('entities.equipment', $creature) }}" class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950 hover:bg-emerald-400">
+                    Экипировка
+                </a>
+                <a href="{{ route('entities.index') }}" class="rounded-md border border-zinc-700 px-4 py-2 text-zinc-200 hover:bg-zinc-900">
+                    К списку
+                </a>
+            </div>
         </div>
 
         @include('partials.form-errors')
@@ -30,27 +39,55 @@
             </div>
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">HP</div>
-                <div class="mt-2 text-3xl font-semibold text-white">{{ $creature->current_hp }}/{{ $creature->max_hp }}</div>
+                <div class="mt-2 text-3xl font-semibold text-white">{{ $creature->current_hp }}/{{ $creature->effectiveMaxHp() }}</div>
             </div>
         </section>
 
+        @include('game.creatures.partials.special-summary', ['creature' => $creature])
+
         <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
-            <h2 class="font-semibold text-white">SPECIAL</h2>
-            <dl class="mt-4 grid grid-cols-7 gap-2 text-center text-xs">
-                @foreach (\App\Models\Creature::SPECIAL_LABELS as $attribute => $label)
-                    <div class="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-2">
-                        <dt class="text-zinc-500">{{ $label }}</dt>
-                        <dd class="mt-1 text-lg font-semibold text-white">{{ $creature->{$attribute} }}</dd>
-                    </div>
-                @endforeach
-            </dl>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="font-semibold text-white">Экипировка</h2>
+                <a href="{{ route('entities.equipment', $creature) }}" class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-950">
+                    Управлять
+                </a>
+            </div>
+
+            @if ($creature->equipmentRows->isEmpty())
+                <p class="mt-4 text-sm text-zinc-400">Предметы пока не экипированы.</p>
+            @else
+                <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                    @foreach ($creature->equipmentRows->groupBy('item_instance_id') as $equipmentRows)
+                        @php
+                            $itemInstance = $equipmentRows->first()->itemInstance;
+                            $item = $itemInstance->item;
+                        @endphp
+                        <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <h3 class="font-semibold text-white">{{ $item->name }}</h3>
+                                    <p class="mt-1 text-xs text-zinc-500">
+                                        {{ $equipmentRows->pluck('slot.name')->filter()->implode(', ') }}
+                                    </p>
+                                </div>
+                                <form method="POST" action="{{ route('entities.equipment.unequip', [$creature, $itemInstance]) }}">
+                                    @csrf
+                                    <button
+                                        type="submit"
+                                        class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                        @disabled(! $creature->is_available_for_battle || ! $creatureInventory->hasFreeSlot())
+                                    >
+                                        Снять
+                                    </button>
+                                </form>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+            @endif
         </section>
 
         <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
-            @php
-                $creatureInventory = $creature->inventory;
-            @endphp
-
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <h2 class="font-semibold text-white">Инвентарь сущности</h2>
                 <span class="rounded-md border border-zinc-800 px-3 py-1 text-sm text-zinc-300">
@@ -60,7 +97,7 @@
 
             @if (! $creature->is_available_for_battle)
                 <div class="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                    Перенос заблокирован на время боя.
+                    Перенос и экипировка заблокированы на время боя.
                 </div>
             @endif
 
@@ -84,16 +121,30 @@
                                             <h4 class="font-semibold text-white">{{ $item->name }}</h4>
                                             <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
                                         </div>
-                                        <form method="POST" action="{{ route('inventory-items.move-to-player', $inventoryItem) }}">
-                                            @csrf
-                                            <button
-                                                type="submit"
-                                                class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
-                                                @disabled(! $creature->is_available_for_battle)
-                                            >
-                                                Забрать
-                                            </button>
-                                        </form>
+                                        <div class="flex flex-wrap gap-2">
+                                            @if ($item->isEquipment())
+                                                <form method="POST" action="{{ route('entities.equipment.equip', [$creature, $inventoryItem]) }}">
+                                                    @csrf
+                                                    <button
+                                                        type="submit"
+                                                        class="rounded-md border border-emerald-500/50 px-3 py-2 text-sm text-emerald-200 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        @disabled(! $creature->is_available_for_battle)
+                                                    >
+                                                        Надеть
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            <form method="POST" action="{{ route('inventory-items.move-to-player', $inventoryItem) }}">
+                                                @csrf
+                                                <button
+                                                    type="submit"
+                                                    class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    @disabled(! $creature->is_available_for_battle)
+                                                >
+                                                    Забрать
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </article>
                             @endforeach
@@ -120,17 +171,31 @@
                                             <h4 class="font-semibold text-white">{{ $item->name }}</h4>
                                             <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
                                         </div>
-                                        <form method="POST" action="{{ route('inventory-items.move-to-creature', $inventoryItem) }}">
-                                            @csrf
-                                            <input type="hidden" name="creature_id" value="{{ $creature->id }}">
-                                            <button
-                                                type="submit"
-                                                class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
-                                                @disabled(! $creature->is_available_for_battle || ! $creatureInventory->hasFreeSlot())
-                                            >
-                                                Передать
-                                            </button>
-                                        </form>
+                                        <div class="flex flex-wrap gap-2">
+                                            @if ($item->isEquipment())
+                                                <form method="POST" action="{{ route('entities.equipment.equip', [$creature, $inventoryItem]) }}">
+                                                    @csrf
+                                                    <button
+                                                        type="submit"
+                                                        class="rounded-md border border-emerald-500/50 px-3 py-2 text-sm text-emerald-200 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        @disabled(! $creature->is_available_for_battle)
+                                                    >
+                                                        Надеть
+                                                    </button>
+                                                </form>
+                                            @endif
+                                            <form method="POST" action="{{ route('inventory-items.move-to-creature', $inventoryItem) }}">
+                                                @csrf
+                                                <input type="hidden" name="creature_id" value="{{ $creature->id }}">
+                                                <button
+                                                    type="submit"
+                                                    class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    @disabled(! $creature->is_available_for_battle || ! $creatureInventory->hasFreeSlot())
+                                                >
+                                                    Передать
+                                                </button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </article>
                             @endforeach

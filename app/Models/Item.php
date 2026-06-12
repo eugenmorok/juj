@@ -78,6 +78,25 @@ class Item extends Model
         return in_array($this->item_type, ['equipment', 'module', 'artifact'], true);
     }
 
+    /**
+     * @return list<string>
+     */
+    public function equipmentSlotKeys(): array
+    {
+        $slotKeys = collect($this->slots_required ?? [])
+            ->filter(fn (mixed $slotKey): bool => is_string($slotKey) && $slotKey !== '')
+            ->values();
+
+        if ($slotKeys->isEmpty() && $this->slot_key) {
+            $slotKeys->push($this->slot_key);
+        }
+
+        return $slotKeys
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function canBeUsedBy(Creature $creature): bool
     {
         if (! $this->is_active || $creature->level < $this->required_level) {

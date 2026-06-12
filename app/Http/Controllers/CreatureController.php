@@ -107,6 +107,8 @@ class CreatureController extends Controller
             'species',
             'skills',
             'inventory.inventoryItems.itemInstance.item',
+            'equipmentRows.slot',
+            'equipmentRows.itemInstance.item',
         ]);
 
         return view('game.creatures.show', [

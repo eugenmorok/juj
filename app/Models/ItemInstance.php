@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
@@ -59,6 +60,14 @@ class ItemInstance extends Model
     public function inventoryItem(): HasOne
     {
         return $this->hasOne(InventoryItem::class);
+    }
+
+    /**
+     * @return HasMany<CreatureEquipment, $this>
+     */
+    public function equipmentRows(): HasMany
+    {
+        return $this->hasMany(CreatureEquipment::class);
     }
 
     /**

@@ -30,6 +30,14 @@ class EquipmentSlot extends Model
         return $this->hasMany(Item::class, 'slot_key', 'code');
     }
 
+    /**
+     * @return HasMany<CreatureEquipment, $this>
+     */
+    public function equipmentRows(): HasMany
+    {
+        return $this->hasMany(CreatureEquipment::class, 'slot_key', 'code');
+    }
+
     #[Scope]
     protected function active(Builder $query): void
     {

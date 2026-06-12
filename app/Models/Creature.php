@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
@@ -101,6 +102,14 @@ class Creature extends Model
     }
 
     /**
+     * @return HasMany<CreatureEquipment, $this>
+     */
+    public function equipmentRows(): HasMany
+    {
+        return $this->hasMany(CreatureEquipment::class);
+    }
+
+    /**
      * @return array<string, int>
      */
     public function specialValues(): array
@@ -112,6 +121,52 @@ class Creature extends Model
         }
 
         return $values;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function equipmentBonuses(): array
+    {
+        $bonuses = [];
+        $equipmentRows = $this->relationLoaded('equipmentRows')
+            ? $this->equipmentRows
+            : $this->equipmentRows()->with('itemInstance.item')->get();
+
+        $equipmentRows
+            ->pluck('itemInstance')
+            ->filter()
+            ->unique('id')
+            ->each(function (ItemInstance $itemInstance) use (&$bonuses): void {
+                foreach (($itemInstance->item?->bonuses ?? []) as $attribute => $value) {
+                    if (! is_numeric($value)) {
+                        continue;
+                    }
+
+                    $bonuses[$attribute] = ($bonuses[$attribute] ?? 0) + (int) $value;
+                }
+            });
+
+        return $bonuses;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function effectiveSpecialValues(): array
+    {
+        $bonuses = $this->equipmentBonuses();
+
+        return collect(self::SPECIAL_ATTRIBUTES)
+            ->mapWithKeys(fn (string $attribute): array => [
+                $attribute => (int) $this->{$attribute} + (int) ($bonuses[$attribute] ?? 0),
+            ])
+            ->all();
+    }
+
+    public function effectiveMaxHp(): int
+    {
+        return $this->max_hp + (int) ($this->equipmentBonuses()['hp'] ?? 0);
     }
 
     public function spentCreationPoints(CreatureSpecies $species): int
