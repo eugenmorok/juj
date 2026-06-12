@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CreatureController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GamePageController;
+use App\Http\Controllers\InventoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'home'])->name('home');
@@ -30,5 +31,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/entities/{creature}/skills/{skill}', [CreatureController::class, 'buySkill'])->name('entities.skills.purchase');
     Route::get('/arena', [GamePageController::class, 'arena'])->name('arena');
     Route::get('/shop', [GamePageController::class, 'shop'])->name('shop');
-    Route::get('/inventory', [GamePageController::class, 'inventory'])->name('inventory');
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
+    Route::post('/inventory-items/{inventoryItem}/move-to-creature', [InventoryController::class, 'moveToCreature'])->name('inventory-items.move-to-creature');
+    Route::post('/inventory-items/{inventoryItem}/move-to-player', [InventoryController::class, 'moveToPlayer'])->name('inventory-items.move-to-player');
 });

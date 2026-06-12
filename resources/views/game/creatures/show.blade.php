@@ -46,6 +46,100 @@
             </dl>
         </section>
 
+        <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+            @php
+                $creatureInventory = $creature->inventory;
+            @endphp
+
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <h2 class="font-semibold text-white">Инвентарь сущности</h2>
+                <span class="rounded-md border border-zinc-800 px-3 py-1 text-sm text-zinc-300">
+                    {{ $creatureInventory->usedSlots() }}/{{ $creatureInventory->capacity() }}
+                </span>
+            </div>
+
+            @if (! $creature->is_available_for_battle)
+                <div class="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                    Перенос заблокирован на время боя.
+                </div>
+            @endif
+
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                    <h3 class="text-sm font-medium uppercase text-zinc-400">У сущности</h3>
+
+                    @if ($creatureInventory->inventoryItems->isEmpty())
+                        <div class="mt-3 rounded-md border border-dashed border-zinc-700 bg-zinc-950 p-4 text-center text-sm text-zinc-400">
+                            Пусто.
+                        </div>
+                    @else
+                        <div class="mt-3 space-y-3">
+                            @foreach ($creatureInventory->inventoryItems->sortBy('slot_number') as $inventoryItem)
+                                @php
+                                    $item = $inventoryItem->itemInstance->item;
+                                @endphp
+                                <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <h4 class="font-semibold text-white">{{ $item->name }}</h4>
+                                            <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
+                                        </div>
+                                        <form method="POST" action="{{ route('inventory-items.move-to-player', $inventoryItem) }}">
+                                            @csrf
+                                            <button
+                                                type="submit"
+                                                class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                                @disabled(! $creature->is_available_for_battle)
+                                            >
+                                                Забрать
+                                            </button>
+                                        </form>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-medium uppercase text-zinc-400">У игрока</h3>
+
+                    @if ($playerInventory->inventoryItems->isEmpty())
+                        <div class="mt-3 rounded-md border border-dashed border-zinc-700 bg-zinc-950 p-4 text-center text-sm text-zinc-400">
+                            Пусто.
+                        </div>
+                    @else
+                        <div class="mt-3 space-y-3">
+                            @foreach ($playerInventory->inventoryItems->sortBy('slot_number') as $inventoryItem)
+                                @php
+                                    $item = $inventoryItem->itemInstance->item;
+                                @endphp
+                                <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <h4 class="font-semibold text-white">{{ $item->name }}</h4>
+                                            <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
+                                        </div>
+                                        <form method="POST" action="{{ route('inventory-items.move-to-creature', $inventoryItem) }}">
+                                            @csrf
+                                            <input type="hidden" name="creature_id" value="{{ $creature->id }}">
+                                            <button
+                                                type="submit"
+                                                class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                                @disabled(! $creature->is_available_for_battle || ! $creatureInventory->hasFreeSlot())
+                                            >
+                                                Передать
+                                            </button>
+                                        </form>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </section>
+
         <div class="grid gap-6 lg:grid-cols-2">
             <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="flex flex-wrap items-center justify-between gap-3">

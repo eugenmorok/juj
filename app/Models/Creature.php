@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'user_id',
@@ -127,6 +128,24 @@ class Creature extends Model
     public function hasSkillCapacity(): bool
     {
         return $this->skills()->count() < $this->maxSkills();
+    }
+
+    public function inventoryCapacity(): int
+    {
+        return 3 + intdiv($this->endurance, 10) + intdiv($this->level, 3);
+    }
+
+    /**
+     * @return HasOne<Inventory, $this>
+     */
+    public function inventory(): HasOne
+    {
+        return $this->hasOne(Inventory::class);
+    }
+
+    public function ensureInventory(): Inventory
+    {
+        return Inventory::forCreature($this);
     }
 
     public static function maxHpForEndurance(int $endurance): int

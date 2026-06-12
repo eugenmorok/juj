@@ -87,6 +87,7 @@ class CreatureController extends Controller
             ]);
 
             $this->attachCreationSkills($creature, $skills);
+            $creature->ensureInventory();
 
             return $creature;
         });
@@ -100,7 +101,13 @@ class CreatureController extends Controller
     {
         $this->authorizeCreatureOwner($request, $creature);
 
-        $creature->load(['type', 'species', 'skills']);
+        $creature->ensureInventory();
+        $creature->load([
+            'type',
+            'species',
+            'skills',
+            'inventory.inventoryItems.itemInstance.item',
+        ]);
 
         return view('game.creatures.show', [
             'creature' => $creature,
@@ -113,6 +120,9 @@ class CreatureController extends Controller
                 ->reject(fn (Skill $skill): bool => $creature->skills->contains($skill))
                 ->filter(fn (Skill $skill): bool => $skill->isAvailableFor($creature))
                 ->values(),
+            'playerInventory' => $request->user()
+                ->ensureInventory()
+                ->load('inventoryItems.itemInstance.item'),
         ]);
     }
 

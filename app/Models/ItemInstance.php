@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'item_id',
@@ -50,6 +51,14 @@ class ItemInstance extends Model
     public function boundCreature(): BelongsTo
     {
         return $this->belongsTo(Creature::class, 'bound_creature_id');
+    }
+
+    /**
+     * @return HasOne<InventoryItem, $this>
+     */
+    public function inventoryItem(): HasOne
+    {
+        return $this->hasOne(InventoryItem::class);
     }
 
     /**

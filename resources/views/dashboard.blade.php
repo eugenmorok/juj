@@ -22,7 +22,7 @@
             </div>
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Инвентарь</div>
-                <div class="mt-2 text-3xl font-semibold text-white">{{ $user->inventory_slots }}</div>
+                <div class="mt-2 text-3xl font-semibold text-white">{{ $user->inventoryCapacity() }}</div>
             </div>
         </section>
 
