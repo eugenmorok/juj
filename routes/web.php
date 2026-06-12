@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\GamePageController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [DashboardController::class, 'home'])->name('home');
@@ -34,7 +35,12 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/entities/{creature}/equipment/{inventoryItem}', [EquipmentController::class, 'equip'])->name('entities.equipment.equip');
     Route::post('/entities/{creature}/equipment/{itemInstance}/unequip', [EquipmentController::class, 'unequip'])->name('entities.equipment.unequip');
     Route::get('/arena', [GamePageController::class, 'arena'])->name('arena');
-    Route::get('/shop', [GamePageController::class, 'shop'])->name('shop');
+    Route::get('/shop', [ShopController::class, 'index'])->name('shop');
+    Route::post('/shop/items/{item}', [ShopController::class, 'buyItem'])->name('shop.items.buy');
+    Route::post('/shop/inventory-slots', [ShopController::class, 'buyInventorySlot'])->name('shop.inventory-slots.buy');
+    Route::post('/shop/services/rename-creature', [ShopController::class, 'renameCreature'])->name('shop.services.rename-creature');
+    Route::post('/shop/services/reset-skills', [ShopController::class, 'resetSkills'])->name('shop.services.reset-skills');
+    Route::post('/shop/services/reset-special', [ShopController::class, 'resetSpecial'])->name('shop.services.reset-special');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
     Route::post('/inventory-items/{inventoryItem}/move-to-creature', [InventoryController::class, 'moveToCreature'])->name('inventory-items.move-to-creature');
     Route::post('/inventory-items/{inventoryItem}/move-to-player', [InventoryController::class, 'moveToPlayer'])->name('inventory-items.move-to-player');

@@ -19,11 +19,6 @@ class GamePageController extends Controller
         return view('game.arena');
     }
 
-    public function shop(): View
-    {
-        return view('game.shop');
-    }
-
     public function inventory(Request $request): View
     {
         return view('game.inventory', [

@@ -63,6 +63,11 @@ class User extends Authenticatable implements FilamentUser
         return $baseSlots + $purchasedSlots;
     }
 
+    public function purchasedInventorySlots(): int
+    {
+        return max(0, $this->inventory_slots - 5);
+    }
+
     /**
      * @return HasMany<Creature, $this>
      */

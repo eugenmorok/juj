@@ -117,6 +117,11 @@ class Item extends Model
         return true;
     }
 
+    public function canBePurchasedBy(User $user): bool
+    {
+        return $this->is_active && $user->level >= $this->required_level;
+    }
+
     #[Scope]
     protected function active(Builder $query): void
     {
