@@ -1,3 +1,8 @@
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
+
+window.Pusher = Pusher;
+
 const applyTheme = (theme) => {
     const normalizedTheme = theme === 'light' ? 'light' : 'dark';
 
@@ -10,7 +15,7 @@ const applyTheme = (theme) => {
     }
 
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
-        const label = normalizedTheme === 'light' ? 'Светлая' : 'Тёмная';
+        const label = normalizedTheme === 'light' ? 'Светлая' : 'Темная';
 
         button.setAttribute('aria-pressed', normalizedTheme === 'light' ? 'true' : 'false');
         button.querySelector('[data-theme-toggle-label]').textContent = label;
@@ -22,7 +27,7 @@ const battleMarker = (state) => [
     state.current_round,
     state.latest_event_id ?? '',
     state.active_round?.actions_count ?? '',
-    state.active_round?.own_action_id ?? '',
+    state.active_round?.own_action_submitted ? 1 : 0,
 ].join('|');
 
 const formatCountdown = (deadline) => {
@@ -38,7 +43,44 @@ const formatCountdown = (deadline) => {
     return `${minutes}:${seconds}`;
 };
 
-const setupBattlePolling = () => {
+let echoInstance = null;
+
+const initializeEcho = () => {
+    const key = import.meta.env.VITE_REVERB_APP_KEY;
+
+    if (!key) {
+        return null;
+    }
+
+    if (echoInstance) {
+        return echoInstance;
+    }
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+    const scheme = import.meta.env.VITE_REVERB_SCHEME || window.location.protocol.replace(':', '') || 'http';
+    const host = import.meta.env.VITE_REVERB_HOST || window.location.hostname;
+    const port = Number(import.meta.env.VITE_REVERB_PORT || (scheme === 'https' ? 443 : 80));
+
+    echoInstance = new Echo({
+        broadcaster: 'reverb',
+        key,
+        wsHost: host,
+        wsPort: port,
+        wssPort: port,
+        forceTLS: scheme === 'https',
+        enabledTransports: ['ws', 'wss'],
+        authEndpoint: '/broadcasting/auth',
+        auth: {
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        },
+    });
+
+    return echoInstance;
+};
+
+const setupBattleRealtime = () => {
     const container = document.querySelector('[data-battle-poll]');
 
     if (!container) {
@@ -46,61 +88,233 @@ const setupBattlePolling = () => {
     }
 
     const stateUrl = container.dataset.battleStateUrl;
-    const countdown = document.querySelector('[data-battle-countdown]');
+    const channelName = container.dataset.battleChannel;
+    const statusBox = container.querySelector('[data-battle-live-status]');
+    const actionPanel = container.querySelector('[data-battle-action-panel]');
+    const participantsPanel = container.querySelector('[data-battle-participants]');
+    const eventsPanel = container.querySelector('[data-battle-events]');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-    if (!stateUrl) {
+    if (!stateUrl || !actionPanel || !participantsPanel || !eventsPanel) {
         return;
     }
 
     let currentMarker = container.dataset.battleMarker || '';
     let deadline = container.dataset.battleDeadline || '';
-    let pollInFlight = false;
+    let requestInFlight = false;
+    let submitInFlight = false;
+    let channel = null;
+    let pollTimer = null;
+    let countdownTimer = null;
 
-    const updateCountdown = () => {
-        if (countdown) {
-            countdown.textContent = formatCountdown(deadline);
-        }
-    };
-
-    const poll = async () => {
-        if (pollInFlight) {
+    const setStatus = (message, tone = 'info') => {
+        if (!statusBox) {
             return;
         }
 
-        pollInFlight = true;
+        const tones = {
+            info: 'border-sky-500/40 bg-sky-500/10 text-sky-100',
+            success: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100',
+            error: 'border-rose-500/40 bg-rose-500/10 text-rose-100',
+        };
+
+        statusBox.className = `rounded-md border px-4 py-3 text-sm ${tones[tone] ?? tones.info}`;
+        statusBox.textContent = message;
+        statusBox.classList.remove('hidden');
+    };
+
+    const clearStatus = () => {
+        if (statusBox) {
+            statusBox.classList.add('hidden');
+            statusBox.textContent = '';
+        }
+    };
+
+    const updateCountdown = () => {
+        container.querySelectorAll('[data-battle-countdown]').forEach((node) => {
+            node.textContent = formatCountdown(deadline);
+        });
+    };
+
+    const applyState = (state, replaceFragments = false) => {
+        currentMarker = state.marker || battleMarker(state);
+        deadline = state.active_round?.deadline_at || state.turn_deadline_at || '';
+
+        container.dataset.battleMarker = currentMarker;
+        container.dataset.battleDeadline = deadline;
+
+        if (replaceFragments && state.fragments) {
+            actionPanel.innerHTML = state.fragments.action_panel_html ?? '';
+            participantsPanel.innerHTML = state.fragments.participants_html ?? '';
+            eventsPanel.innerHTML = state.fragments.events_html ?? '';
+        }
+
+        updateCountdown();
+
+        if (state.status !== 'running' && pollTimer) {
+            window.clearInterval(pollTimer);
+            pollTimer = null;
+        }
+    };
+
+    const requestState = async (includeFragments = false) => {
+        if (requestInFlight) {
+            return null;
+        }
+
+        requestInFlight = true;
 
         try {
-            const response = await fetch(stateUrl, {
+            const url = new URL(stateUrl, window.location.origin);
+
+            if (includeFragments) {
+                url.searchParams.set('include_fragments', '1');
+            }
+
+            const response = await fetch(url, {
                 credentials: 'same-origin',
                 headers: {
                     Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
             });
 
             if (!response.ok) {
-                return;
+                return null;
             }
 
-            const state = await response.json();
-            const nextMarker = battleMarker(state);
-
-            deadline = state.active_round?.deadline_at || state.turn_deadline_at || deadline;
-            updateCountdown();
-
-            if (nextMarker !== currentMarker) {
-                window.location.reload();
-                return;
-            }
+            return await response.json();
         } catch {
-            // Polling is best-effort; manual refresh still works.
+            return null;
         } finally {
-            pollInFlight = false;
+            requestInFlight = false;
         }
     };
 
+    const refreshBattle = async (includeFragments = false) => {
+        const state = await requestState(includeFragments);
+
+        if (!state) {
+            return null;
+        }
+
+        applyState(state, includeFragments);
+
+        return state;
+    };
+
+    const poll = async () => {
+        const previousMarker = currentMarker;
+        const state = await refreshBattle(false);
+
+        if (!state) {
+            return;
+        }
+
+        if ((state.marker || battleMarker(state)) !== previousMarker) {
+            await refreshBattle(true);
+        }
+    };
+
+    const firstError = (payload) => {
+        if (!payload || typeof payload !== 'object') {
+            return 'Не удалось выполнить действие. Попробуйте еще раз.';
+        }
+
+        if (typeof payload.message === 'string' && payload.message.trim() !== '') {
+            return payload.message;
+        }
+
+        const errors = payload.errors ?? {};
+        const firstEntry = Object.values(errors)[0];
+
+        if (Array.isArray(firstEntry) && firstEntry[0]) {
+            return firstEntry[0];
+        }
+
+        return 'Не удалось выполнить действие. Попробуйте еще раз.';
+    };
+
+    container.addEventListener('submit', async (event) => {
+        const form = event.target.closest('[data-battle-action-form]');
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (submitInFlight) {
+            return;
+        }
+
+        submitInFlight = true;
+        clearStatus();
+
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = true;
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                setStatus(firstError(payload), 'error');
+                await refreshBattle(true);
+
+                return;
+            }
+
+            applyState(payload, true);
+            setStatus(payload.message || 'Тактика шага принята.', 'success');
+        } catch {
+            setStatus('Не удалось отправить тактику. Попробуйте еще раз.', 'error');
+        } finally {
+            submitInFlight = false;
+
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
+        }
+    });
+
+    const echo = initializeEcho();
+
+    if (echo && channelName) {
+        channel = echo.private(channelName);
+        channel.listen('.battle.state.updated', async () => {
+            await refreshBattle(true);
+        });
+    }
+
     updateCountdown();
-    window.setInterval(updateCountdown, 250);
-    window.setInterval(poll, 2000);
+    countdownTimer = window.setInterval(updateCountdown, 250);
+    pollTimer = window.setInterval(poll, 2000);
+
+    window.addEventListener('beforeunload', () => {
+        if (countdownTimer) {
+            window.clearInterval(countdownTimer);
+        }
+
+        if (pollTimer) {
+            window.clearInterval(pollTimer);
+        }
+
+        if (echo && channelName) {
+            echo.leave(channelName);
+        }
+    }, { once: true });
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -120,5 +334,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    setupBattlePolling();
+    setupBattleRealtime();
 });

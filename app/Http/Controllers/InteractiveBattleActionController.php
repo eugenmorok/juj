@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Battle;
 use App\Models\BattleAction;
 use App\Services\InteractiveBattleService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class InteractiveBattleActionController extends Controller
 {
-    public function store(Request $request, Battle $battle, InteractiveBattleService $interactiveBattles): RedirectResponse
+    public function store(Request $request, Battle $battle, InteractiveBattleService $interactiveBattles): JsonResponse|RedirectResponse
     {
         $attributes = $request->validate([
             'attack_zone' => ['required', 'string', Rule::in(array_keys(BattleAction::ZONES))],
@@ -20,6 +21,15 @@ class InteractiveBattleActionController extends Controller
         ]);
 
         $battle = $interactiveBattles->submitAction($request->user(), $battle, $attributes);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $battle->status === Battle::STATUS_FINISHED
+                    ? 'РЁР°Рі РїСЂРёРЅСЏС‚, Р±РѕР№ Р·Р°РІРµСЂС€РµРЅ.'
+                    : 'РўР°РєС‚РёРєР° С€Р°РіР° РїСЂРёРЅСЏС‚Р°.',
+                ...$interactiveBattles->statePayload($battle, $request->user(), true),
+            ]);
+        }
 
         return redirect()
             ->route('arena.battles.show', $battle)

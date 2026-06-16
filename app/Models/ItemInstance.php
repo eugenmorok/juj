@@ -27,6 +27,7 @@ class ItemInstance extends Model
         'equipped' => 'Экипирован',
         'locked' => 'Заблокирован в бою',
         'used' => 'Использован',
+        'sold' => 'Продан',
         'deleted' => 'Удален',
     ];
 

@@ -138,9 +138,7 @@ class TurnBasedArenaBattleTest extends TestCase
 
         $this->travel(7)->seconds();
 
-        $this->actingAs($challenger)
-            ->get(route('arena.battles.show', $battle))
-            ->assertOk();
+        app(InteractiveBattleService::class)->processBattle($battle);
 
         $this->assertSame(BattleRound::STATUS_RESOLVED, $round->refresh()->status);
         $this->assertSame(2, BattleAction::query()->where('battle_round_id', $round->id)->where('is_auto', true)->count());

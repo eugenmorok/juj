@@ -5,9 +5,11 @@ namespace App\Services;
 use App\Models\ArenaSetting;
 use App\Models\Creature;
 use App\Models\Inventory;
+use App\Models\InventoryItem;
 use App\Models\Item;
 use App\Models\ItemInstance;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +20,8 @@ class ShopService
     public const INVENTORY_SLOT_STEP_COST = 25;
 
     public const MAX_PURCHASED_INVENTORY_SLOTS = 50;
+
+    public const ITEM_SELL_RATE = 0.5;
 
     public const SERVICE_PRICES = [
         'rename_creature' => 25,
@@ -62,6 +66,102 @@ class ShopService
         });
     }
 
+    public function sellInventoryItem(User $user, InventoryItem $inventoryItem): int
+    {
+        return DB::transaction(function () use ($user, $inventoryItem): int {
+            $lockedUser = $this->lockedUser($user);
+            $storedInventoryItem = InventoryItem::query()
+                ->whereKey($inventoryItem->id)
+                ->lockForUpdate()
+                ->firstOrFail()
+                ->load([
+                    'inventory.creature',
+                    'itemInstance.item',
+                    'itemInstance.equipmentRows',
+                ]);
+
+            $this->ensureInventoryItemBelongsToUser($lockedUser, $storedInventoryItem);
+            $this->ensureInventoryItemCanBeSold($storedInventoryItem);
+
+            $sellPrice = self::sellPrice($storedInventoryItem->itemInstance->item);
+
+            $storedInventoryItem->delete();
+            $storedInventoryItem->itemInstance->forceFill([
+                'bound_creature_id' => null,
+                'state' => 'sold',
+            ])->save();
+
+            $lockedUser->forceFill([
+                'tokens' => $lockedUser->tokens + $sellPrice,
+            ])->save();
+
+            return $sellPrice;
+        });
+    }
+
+    public function grantTokens(User $user, int $amount): User
+    {
+        if ($amount < 1) {
+            throw ValidationException::withMessages([
+                'amount' => 'Сумма выдачи должна быть больше нуля.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($user, $amount): User {
+            $lockedUser = $this->lockedUser($user);
+            $lockedUser->forceFill([
+                'tokens' => $lockedUser->tokens + $amount,
+            ])->save();
+
+            return $lockedUser->refresh();
+        });
+    }
+
+    /**
+     * @return Collection<int, ItemInstance>
+     */
+    public function grantItem(User $user, Item $item, int $quantity = 1): Collection
+    {
+        if ($quantity < 1) {
+            throw ValidationException::withMessages([
+                'quantity' => 'Количество предметов должно быть больше нуля.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($user, $item, $quantity): Collection {
+            $lockedUser = $this->lockedUser($user);
+            $item->refresh();
+            $inventory = Inventory::forUser($lockedUser);
+
+            $this->ensureInventoryHasSlots($inventory, $quantity);
+
+            if ($item->is_unique && $quantity > 1) {
+                throw ValidationException::withMessages([
+                    'item' => 'Уникальный предмет можно выдать только в одном экземпляре.',
+                ]);
+            }
+
+            $this->ensureUniqueItemLimit($lockedUser, $item);
+
+            $instances = collect();
+
+            for ($i = 0; $i < $quantity; $i++) {
+                $itemInstance = ItemInstance::query()->create([
+                    'item_id' => $item->id,
+                    'owner_user_id' => $lockedUser->id,
+                    'bound_creature_id' => null,
+                    'durability' => $item->isConsumable() ? $item->initialUses() : 100,
+                    'state' => 'stored',
+                ]);
+
+                $inventory->addItemInstance($itemInstance);
+                $instances->push($itemInstance);
+            }
+
+            return $instances;
+        });
+    }
+
     public function buyInventorySlot(User $user): int
     {
         return DB::transaction(function () use ($user): int {
@@ -87,6 +187,11 @@ class ShopService
 
             return $cost;
         });
+    }
+
+    public static function sellPrice(Item $item): int
+    {
+        return max(0, (int) floor($item->price * self::ITEM_SELL_RATE));
     }
 
     public function renameCreature(User $user, Creature $creature, string $name): void
@@ -207,6 +312,15 @@ class ShopService
         }
     }
 
+    private function ensureInventoryHasSlots(Inventory $inventory, int $quantity): void
+    {
+        if ($inventory->freeSlots() < $quantity) {
+            throw ValidationException::withMessages([
+                'inventory' => 'В общем инвентаре нет нужного количества свободных ячеек.',
+            ]);
+        }
+    }
+
     private function ensureUniqueItemLimit(User $user, Item $item): void
     {
         if (! $item->is_unique) {
@@ -216,7 +330,7 @@ class ShopService
         $alreadyOwned = ItemInstance::query()
             ->where('owner_user_id', $user->id)
             ->where('item_id', $item->id)
-            ->whereNotIn('state', ['deleted', 'used'])
+            ->whereNotIn('state', ['deleted', 'sold', 'used'])
             ->exists();
 
         if ($alreadyOwned) {
@@ -236,6 +350,36 @@ class ShopService
         if (! $creature->is_available_for_battle) {
             throw ValidationException::withMessages([
                 'service' => 'Услуга недоступна, пока сущность находится в бою.',
+            ]);
+        }
+    }
+
+    private function ensureInventoryItemBelongsToUser(User $user, InventoryItem $inventoryItem): void
+    {
+        abort_unless($inventoryItem->inventory?->owner_user_id === $user->id, 404);
+        abort_unless($inventoryItem->itemInstance?->owner_user_id === $user->id, 404);
+    }
+
+    private function ensureInventoryItemCanBeSold(InventoryItem $inventoryItem): void
+    {
+        $inventory = $inventoryItem->inventory;
+        $itemInstance = $inventoryItem->itemInstance;
+
+        if (! $itemInstance?->item) {
+            throw ValidationException::withMessages([
+                'item' => 'Предмет не найден в каталоге.',
+            ]);
+        }
+
+        if ($inventory?->creature && ! $inventory->creature->is_available_for_battle) {
+            throw ValidationException::withMessages([
+                'inventory' => 'Нельзя продавать предметы сущности, которая находится в бою.',
+            ]);
+        }
+
+        if ($itemInstance->state !== 'stored' || $itemInstance->equipmentRows->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'item' => 'Можно продавать только предметы, лежащие в инвентаре.',
             ]);
         }
     }

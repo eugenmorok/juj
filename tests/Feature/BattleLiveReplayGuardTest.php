@@ -38,7 +38,7 @@ class BattleLiveReplayGuardTest extends TestCase
             ->assertJsonPath('active_round.actions_count', 1);
     }
 
-    public function test_battle_state_endpoint_advances_expired_rounds(): void
+    public function test_battle_state_endpoint_does_not_advance_expired_rounds(): void
     {
         [$type, $species] = $this->catalog();
         $challenger = User::factory()->create();
@@ -53,10 +53,44 @@ class BattleLiveReplayGuardTest extends TestCase
         $this->actingAs($challenger)
             ->getJson(route('arena.battles.state', $battle))
             ->assertOk()
-            ->assertJsonPath('current_round', 2)
-            ->assertJsonPath('active_round.round_number', 2);
+            ->assertJsonPath('current_round', 1)
+            ->assertJsonPath('active_round.round_number', 1);
+
+        $this->assertSame(BattleRound::STATUS_COLLECTING, $round->refresh()->status);
+
+        app(InteractiveBattleService::class)->processBattle($battle);
 
         $this->assertSame(BattleRound::STATUS_RESOLVED, $round->refresh()->status);
+        $this->assertSame(2, $battle->refresh()->current_round);
+    }
+
+    public function test_unavailable_broadcaster_does_not_break_interactive_battle_creation(): void
+    {
+        config([
+            'broadcasting.default' => 'reverb',
+            'broadcasting.connections.reverb.key' => 'test-key',
+            'broadcasting.connections.reverb.secret' => 'test-secret',
+            'broadcasting.connections.reverb.app_id' => 'test-app',
+            'broadcasting.connections.reverb.options.host' => '127.0.0.1',
+            'broadcasting.connections.reverb.options.port' => 9,
+            'broadcasting.connections.reverb.options.scheme' => 'http',
+            'broadcasting.connections.reverb.options.useTLS' => false,
+        ]);
+
+        [$type, $species] = $this->catalog();
+        $user = User::factory()->create();
+        $botProfile = BotProfile::factory()->create();
+        $creature = $this->creatureFor($user, $type, $species, ['name' => 'Broadcast Guard']);
+        $botCreature = $this->creatureFor($botProfile->user, $type, $species, ['name' => 'Offline Reverb Bot']);
+
+        $battle = app(InteractiveBattleService::class)->start($creature, $botCreature, $user);
+
+        $this->assertSame(Battle::MODE_INTERACTIVE, $battle->mode);
+        $this->assertSame(Battle::STATUS_RUNNING, $battle->status);
+        $this->assertDatabaseHas('battle_events', [
+            'battle_id' => $battle->id,
+            'event_type' => 'interactive_battle_started',
+        ]);
     }
 
     public function test_replay_page_shows_round_actions_and_events(): void

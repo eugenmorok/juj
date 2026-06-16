@@ -41,6 +41,7 @@ class Dashboard extends BaseDashboard
                 ['label' => 'Изменения баланса', 'value' => BalanceChangeLog::query()->count()],
             ],
             'links' => [
+                ['label' => 'Игроки', 'description' => 'Баланс токенов, инвентарь, боты и быстрые экономические выдачи.', 'route' => 'filament.admin.resources.users.index'],
                 ['label' => 'Типы сущностей', 'description' => 'Управление основными классами сущностей.', 'route' => 'filament.admin.resources.creature-types.index'],
                 ['label' => 'Виды сущностей', 'description' => 'Базовые SPECIAL и доступность при создании.', 'route' => 'filament.admin.resources.creature-species.index'],
                 ['label' => 'Навыки', 'description' => 'Стоимость, требования и доступность навыков.', 'route' => 'filament.admin.resources.skills.index'],

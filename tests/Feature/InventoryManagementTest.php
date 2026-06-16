@@ -134,6 +134,64 @@ class InventoryManagementTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_player_can_sell_stored_inventory_item_for_tokens(): void
+    {
+        $user = User::factory()->create(['tokens' => 5]);
+        $item = Item::factory()->create(['price' => 81]);
+        $itemInstance = ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+        ]);
+        $inventoryItem = $user->ensureInventory()->addItemInstance($itemInstance);
+
+        $this->actingAs($user)
+            ->from(route('inventory'))
+            ->post(route('inventory-items.sell', $inventoryItem))
+            ->assertRedirect(route('inventory', absolute: false))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', 'Предмет продан за 40 токенов.');
+
+        $this->assertSame(45, $user->refresh()->tokens);
+        $this->assertDatabaseMissing('inventory_items', ['id' => $inventoryItem->id]);
+        $this->assertDatabaseHas('item_instances', [
+            'id' => $itemInstance->id,
+            'owner_user_id' => $user->id,
+            'bound_creature_id' => null,
+            'state' => 'sold',
+        ]);
+    }
+
+    public function test_player_cannot_sell_foreign_or_battle_locked_creature_inventory_item(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $foreignInventoryItem = $otherUser->ensureInventory()->addItemInstance(ItemInstance::factory()->create([
+            'owner_user_id' => $otherUser->id,
+        ]));
+
+        $this->actingAs($user)
+            ->post(route('inventory-items.sell', $foreignInventoryItem))
+            ->assertNotFound();
+
+        $creature = $this->creatureFor($user, [
+            'endurance' => 10,
+            'is_available_for_battle' => false,
+        ]);
+        $creatureInventory = $creature->ensureInventory();
+        $inventoryItem = $creatureInventory->addItemInstance(ItemInstance::factory()->create([
+            'owner_user_id' => $user->id,
+        ]));
+
+        $this->actingAs($user)
+            ->from(route('inventory'))
+            ->post(route('inventory-items.sell', $inventoryItem))
+            ->assertRedirect(route('inventory', absolute: false))
+            ->assertSessionHasErrors('inventory');
+
+        $this->assertDatabaseHas('inventory_items', ['id' => $inventoryItem->id]);
+        $this->assertSame('stored', $inventoryItem->itemInstance->refresh()->state);
+    }
+
     public function test_player_cannot_move_items_from_creature_in_battle(): void
     {
         $user = User::factory()->create();
@@ -168,7 +226,8 @@ class InventoryManagementTest extends TestCase
             ->assertSee('Общий инвентарь игрока')
             ->assertSee('Scout Carrier')
             ->assertSee('Передать')
-            ->assertSee('Забрать');
+            ->assertSee('Забрать')
+            ->assertSee('Продать за');
     }
 
     public function test_inventory_page_filters_items_by_catalog_fields_and_location(): void
