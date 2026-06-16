@@ -8,9 +8,9 @@ use App\Models\ItemInstance;
 
 class PowerScoreService
 {
-    public function calculate(Creature $creature): int
+    public function calculate(Creature $creature, ?ArenaSetting $settings = null): int
     {
-        $settings = ArenaSetting::current();
+        $settings ??= ArenaSetting::current();
         $creature->loadMissing([
             'skills',
             'equipmentRows.itemInstance.item',

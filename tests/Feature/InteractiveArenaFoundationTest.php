@@ -11,6 +11,7 @@ use App\Models\BotProfile;
 use App\Models\Creature;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
+use App\Models\Inventory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -49,6 +50,7 @@ class InteractiveArenaFoundationTest extends TestCase
             ->assertSee('Бот');
 
         $this->assertGreaterThanOrEqual(5, User::query()->where('is_bot', true)->count());
+        $this->assertSame(0, Inventory::query()->count());
     }
 
     public function test_matchmaking_page_shows_suitable_real_players(): void

@@ -27,14 +27,18 @@ class BotGenerationService
         int $maxLevel = 3,
         bool $withCreature = true,
         bool $withEquipment = true,
+        bool $withInventory = true,
+        bool $withSkills = true,
+        bool $loadCreatures = true,
+        bool $reloadProfiles = true,
     ): Collection {
         $count = min(50, max(1, $count));
         $minLevel = max(1, $minLevel);
         $maxLevel = max($minLevel, $maxLevel);
 
-        return DB::transaction(function () use ($count, $style, $minLevel, $maxLevel, $withCreature, $withEquipment): Collection {
+        return DB::transaction(function () use ($count, $style, $minLevel, $maxLevel, $withCreature, $withEquipment, $withInventory, $withSkills, $loadCreatures, $reloadProfiles): Collection {
             return collect(range(1, $count))
-                ->map(function (int $index) use ($style, $minLevel, $maxLevel, $withCreature, $withEquipment): BotProfile {
+                ->map(function (int $index) use ($style, $minLevel, $maxLevel, $withCreature, $withEquipment, $withInventory, $withSkills, $loadCreatures, $reloadProfiles): BotProfile {
                     $profile = BotProfile::query()->create([
                         'display_name' => $this->botName($style, $index),
                         'style' => array_key_exists($style, BotProfile::STYLES) ? $style : 'balanced',
@@ -45,17 +49,19 @@ class BotGenerationService
                     ]);
 
                     if ($withCreature) {
-                        $this->generateCreature($profile, $withEquipment);
+                        $this->generateCreature($profile, $withEquipment, $withInventory, $withSkills, $loadCreatures);
                     }
 
-                    return $profile->refresh()->load('user.creatures');
+                    return $reloadProfiles
+                        ? $profile->refresh()->load('user.creatures')
+                        : $profile;
                 });
         });
     }
 
-    public function generateCreature(BotProfile $profile, bool $withEquipment = true): Creature
+    public function generateCreature(BotProfile $profile, bool $withEquipment = true, bool $withInventory = true, bool $withSkills = true, bool $loadCreature = true): Creature
     {
-        return DB::transaction(function () use ($profile, $withEquipment): Creature {
+        return DB::transaction(function () use ($profile, $withEquipment, $withInventory, $withSkills, $loadCreature): Creature {
             $profile->loadMissing('user');
             $species = $this->randomSpecies();
             $level = random_int($profile->min_level, max($profile->min_level, $profile->max_level));
@@ -81,9 +87,14 @@ class BotGenerationService
                 'is_available_for_battle' => true,
             ]);
 
-            $profile->user->ensureInventory();
-            $creature->ensureInventory();
-            $this->attachSkills($creature, $profile->style);
+            if ($withInventory) {
+                $profile->user->ensureInventory();
+                $creature->ensureInventory();
+            }
+
+            if ($withSkills) {
+                $this->attachSkills($creature, $profile->style);
+            }
 
             if ($withEquipment) {
                 $this->generateEquipmentForCreature($creature, $profile->style);
@@ -94,7 +105,9 @@ class BotGenerationService
                 'last_generated_at' => now(),
             ])->save();
 
-            return $creature->load(['type', 'species', 'skills', 'equipmentRows.itemInstance.item']);
+            return $loadCreature
+                ? $creature->load(['type', 'species', 'skills', 'equipmentRows.itemInstance.item'])
+                : $creature;
         });
     }
 
@@ -268,13 +281,23 @@ class BotGenerationService
             ->sortByDesc(fn (Skill $skill): int => $this->skillStyleScore($skill, $style))
             ->take($creature->maxSkills());
 
-        foreach ($skills as $skill) {
-            $creature->skills()->syncWithoutDetaching([
-                $skill->id => [
-                    'cost_paid' => $skill->cost,
-                    'source' => 'bot-generation',
-                ],
-            ]);
+        $existingSkillIds = $creature->skills()->pluck('skills.id')->all();
+        $now = now();
+        $rows = $skills
+            ->reject(fn (Skill $skill): bool => in_array($skill->id, $existingSkillIds, true))
+            ->map(fn (Skill $skill): array => [
+                'creature_id' => $creature->id,
+                'skill_id' => $skill->id,
+                'cost_paid' => $skill->cost,
+                'source' => 'bot-generation',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])
+            ->values()
+            ->all();
+
+        if ($rows !== []) {
+            DB::table('creature_skills')->insert($rows);
         }
     }
 
