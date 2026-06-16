@@ -3,6 +3,8 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\ArenaController;
+use App\Http\Controllers\ArenaChallengeController;
+use App\Http\Controllers\ArenaMatchmakingController;
 use App\Http\Controllers\CreatureController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentController;
@@ -36,6 +38,13 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/entities/{creature}/equipment/{inventoryItem}', [EquipmentController::class, 'equip'])->name('entities.equipment.equip');
     Route::post('/entities/{creature}/equipment/{itemInstance}/unequip', [EquipmentController::class, 'unequip'])->name('entities.equipment.unequip');
     Route::get('/arena', [ArenaController::class, 'index'])->name('arena');
+    Route::post('/arena/search', [ArenaMatchmakingController::class, 'store'])->name('arena.search.store');
+    Route::get('/arena/search/{session}', [ArenaMatchmakingController::class, 'show'])->name('arena.search.show');
+    Route::post('/arena/challenges', [ArenaChallengeController::class, 'store'])->name('arena.challenges.store');
+    Route::get('/arena/challenges/{challenge}', [ArenaChallengeController::class, 'show'])->name('arena.challenges.show');
+    Route::post('/arena/challenges/{challenge}/accept', [ArenaChallengeController::class, 'accept'])->name('arena.challenges.accept');
+    Route::post('/arena/challenges/{challenge}/decline', [ArenaChallengeController::class, 'decline'])->name('arena.challenges.decline');
+    Route::post('/arena/challenges/{challenge}/cancel', [ArenaChallengeController::class, 'cancel'])->name('arena.challenges.cancel');
     Route::post('/arena/battles', [ArenaController::class, 'start'])->name('arena.battles.start');
     Route::get('/arena/battles/{battle}', [ArenaController::class, 'show'])->name('arena.battles.show');
     Route::get('/shop', [ShopController::class, 'index'])->name('shop');
