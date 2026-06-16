@@ -1,15 +1,15 @@
 @php
     $resultLabels = [
-        'win' => 'РџРѕР±РµРґР°',
-        'loss' => 'РџРѕСЂР°Р¶РµРЅРёРµ',
-        'draw' => 'РќРёС‡СЊСЏ',
+        'win' => 'Победа',
+        'loss' => 'Поражение',
+        'draw' => 'Ничья',
     ];
 @endphp
 
 <section class="grid gap-4 lg:grid-cols-2">
     @foreach ($battle->participants as $participant)
         @php
-            $resultLabel = $participant->result ? ($resultLabels[$participant->result] ?? $participant->result) : 'Р’ Р±РѕСЋ';
+            $resultLabel = $participant->result ? ($resultLabels[$participant->result] ?? $participant->result) : 'В бою';
             $resultTone = match ($participant->result) {
                 'win' => 'border-emerald-500/40 text-emerald-100',
                 'loss' => 'border-rose-500/40 text-rose-100',
@@ -22,7 +22,7 @@
                 <div>
                     <h2 class="text-xl font-semibold text-white">{{ $participant->creature->name }}</h2>
                     <p class="mt-1 text-sm text-zinc-400">
-                        {{ $participant->creature->user->name }} / СѓСЂ. {{ $participant->level_before }} -> {{ $participant->level_after }}
+                        {{ $participant->creature->user->name }} / ур. {{ $participant->level_before }} -> {{ $participant->level_after }}
                     </p>
                 </div>
                 <span class="rounded-md border px-3 py-1 text-sm {{ $resultTone }}">
@@ -44,14 +44,14 @@
                     <dd class="mt-1 text-zinc-200">+{{ $participant->reward_xp }}</dd>
                 </div>
                 <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                    <dt class="text-xs text-zinc-500">РўРѕРєРµРЅС‹</dt>
+                    <dt class="text-xs text-zinc-500">Монеты</dt>
                     <dd class="mt-1 text-zinc-200">+{{ $participant->reward_tokens }}</dd>
                 </div>
             </dl>
 
             <p class="mt-4 text-sm text-zinc-400">
-                РћС‡РєРё СЂР°Р·РІРёС‚РёСЏ: +{{ $participant->reward_development_points }}.
-                РњРЅРѕР¶РёС‚РµР»СЊ РЅР°РіСЂР°Рґ: x{{ $participant->reward_multiplier }}.
+                Очки развития: +{{ $participant->reward_development_points }}.
+                Множитель наград: x{{ $participant->reward_multiplier }}.
             </p>
             <div class="mt-4">
                 @include('partials.progress-bar', [

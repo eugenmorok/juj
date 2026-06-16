@@ -64,7 +64,7 @@ class InteractiveBattleService
                 'seed' => $seed,
                 'action_seconds' => self::ACTION_SECONDS,
                 'first_actor_creature_id' => $defenderCreature->id,
-            ], "Р‘РѕР№ РЅР°С‡РёРЅР°РµС‚СЃСЏ: {$challengerCreature->name} РїСЂРѕС‚РёРІ {$defenderCreature->name}. РџРµСЂРІС‹Р№ С‚РµРјРї Сѓ {$defenderCreature->name}.");
+            ], "Бой начинается: {$challengerCreature->name} против {$defenderCreature->name}. Первый темп у {$defenderCreature->name}.");
 
             $round = $this->createRound($battle, 1, $defenderCreature->id);
             $this->createBotActions($battle, $round);
@@ -162,13 +162,13 @@ class InteractiveBattleService
             $round = $this->currentRound($battle);
             if (! $round?->isCollecting()) {
                 throw ValidationException::withMessages([
-                    'battle' => 'РЎРµР№С‡Р°СЃ РЅРµС‚ Р°РєС‚РёРІРЅРѕРіРѕ С€Р°РіР° РґР»СЏ РІС‹Р±РѕСЂР° С‚Р°РєС‚РёРєРё.',
+                    'battle' => 'Сейчас нет активного шага для выбора тактики.',
                 ]);
             }
 
             if ($round->deadline_at && $round->deadline_at->isPast()) {
                 throw ValidationException::withMessages([
-                    'battle' => 'Р’СЂРµРјСЏ РЅР° РІС‹Р±РѕСЂ С‚Р°РєС‚РёРєРё СѓР¶Рµ РёСЃС‚РµРєР»Рѕ. Р”РѕР¶РґРёС‚РµСЃСЊ РѕР±РЅРѕРІР»РµРЅРёСЏ С€Р°РіР°.',
+                    'battle' => 'Время на выбор тактики уже истекло. Дождитесь обновления шага.',
                 ]);
             }
 
@@ -176,7 +176,7 @@ class InteractiveBattleService
 
             if (BattleAction::query()->where('battle_round_id', $round->id)->where('creature_id', $participant->creature_id)->exists()) {
                 throw ValidationException::withMessages([
-                    'battle' => 'РўР°РєС‚РёРєР° РґР»СЏ СЌС‚РѕРіРѕ С€Р°РіР° СѓР¶Рµ РІС‹Р±СЂР°РЅР°.',
+                    'battle' => 'Тактика для этого шага уже выбрана.',
                 ]);
             }
 
@@ -381,11 +381,11 @@ class InteractiveBattleService
             'turn_deadline_at' => $deadline,
         ])->save();
 
-        $firstActorName = Creature::query()->whereKey($firstActorCreatureId)->value('name') ?? 'СѓС‡Р°СЃС‚РЅРёРє';
+        $firstActorName = Creature::query()->whereKey($firstActorCreatureId)->value('name') ?? 'участник';
         $this->event($battle, $roundNumber, 'round_collecting', null, null, [
             'deadline_at' => $deadline->toISOString(),
             'first_actor_creature_id' => $firstActorCreatureId,
-        ], "РЁР°Рі {$roundNumber}: РІС‹Р±РѕСЂ С‚Р°РєС‚РёРєРё РѕС‚РєСЂС‹С‚ РЅР° ".self::ACTION_SECONDS." СЃРµРєСѓРЅРґ. РџРµСЂРІС‹Р№ С‚РµРјРї Сѓ {$firstActorName}.");
+        ], "Шаг {$roundNumber}: выбор тактики открыт на ".self::ACTION_SECONDS." секунд. Первый темп у {$firstActorName}.");
 
         $this->dispatchRoundResolution($battle, $round);
 
@@ -539,13 +539,13 @@ class InteractiveBattleService
         $hitRoll = $this->roll($battle, $round, $attacker->creature_id, 'hit-'.$action->id, 1, 100);
 
         if ($hitRoll > $hitChance) {
-            $guardText = $sameZoneGuard ? ' Р—Р°С‰РёС‚Р° Р·РѕРЅС‹ СЃСЂР°Р±РѕС‚Р°Р»Р°.' : '';
+            $guardText = $sameZoneGuard ? ' Защита зоны сработала.' : '';
             $this->event($battle, $round->round_number, 'interactive_miss', $attacker->creature, $target->creature, [
                 'attack_zone' => $action->attack_zone,
                 'defense_zone' => $targetAction?->defense_zone,
                 'hit_chance' => $hitChance,
                 'hit_roll' => $hitRoll,
-            ], "{$attacker->creature->name} Р°С‚Р°РєСѓРµС‚ РІ {$this->zoneLabel($action->attack_zone)}, РЅРѕ РїСЂРѕРјР°С…РёРІР°РµС‚СЃСЏ.{$guardText}");
+            ], "{$attacker->creature->name} атакует в {$this->zoneLabel($action->attack_zone)}, но промахивается.{$guardText}");
 
             return;
         }
@@ -563,8 +563,8 @@ class InteractiveBattleService
             'hp_after' => max(0, $target->hp_after - $damage),
         ])->save();
 
-        $suffix = $critical ? ' РљСЂРёС‚РёС‡РµСЃРєРёР№ СѓРґР°СЂ.' : '';
-        $guardText = $sameZoneGuard ? ' РЈСЂРѕРЅ СЃРЅРёР¶РµРЅ Р·Р°С‰РёС‚РѕР№ Р·РѕРЅС‹.' : '';
+        $suffix = $critical ? ' Критический удар.' : '';
+        $guardText = $sameZoneGuard ? ' Урон снижен защитой зоны.' : '';
         $this->event($battle, $round->round_number, $critical ? 'interactive_critical_hit' : 'interactive_hit', $attacker->creature, $target->creature, [
             'attack_zone' => $action->attack_zone,
             'defense_zone' => $targetAction?->defense_zone,
@@ -574,7 +574,7 @@ class InteractiveBattleService
             'crit_chance' => $critChance,
             'crit_roll' => $critRoll,
             'target_hp' => max(0, $target->hp_after),
-        ], "{$attacker->creature->name} РїРѕРїР°РґР°РµС‚ РІ {$this->zoneLabel($action->attack_zone)}: {$damage} СѓСЂРѕРЅР°. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
+        ], "{$attacker->creature->name} попадает в {$this->zoneLabel($action->attack_zone)}: {$damage} урона. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
     }
 
     /**
@@ -595,7 +595,7 @@ class InteractiveBattleService
         if (! $inventoryItem || ! $this->isConsumableAvailableForParticipant($inventoryItem, $participant)) {
             $this->event($battle, $round->round_number, 'interactive_item_failed', $participant->creature, null, [
                 'inventory_item_id' => $action->inventory_item_id,
-            ], "{$participant->creature->name} РЅРµ СЃРјРѕРі РїСЂРёРјРµРЅРёС‚СЊ РїСЂРµРґРјРµС‚.");
+            ], "{$participant->creature->name} не смог применить предмет.");
 
             return ['heal' => 0, 'max_hp' => 0, 'special' => []];
         }
@@ -663,14 +663,14 @@ class InteractiveBattleService
             $parts[] = '+'.$value.' '.(Creature::SPECIAL_LABELS[$attribute] ?? $attribute);
         }
 
-        $effectText = $parts === [] ? 'Р±РµР· Р·Р°РјРµС‚РЅРѕРіРѕ СЌС„С„РµРєС‚Р°' : implode(', ', $parts);
+        $effectText = $parts === [] ? 'без заметного эффекта' : implode(', ', $parts);
         $this->event($battle, $round->round_number, 'interactive_item_used', $participant->creature, null, [
             'item_id' => $item->id,
             'item_name' => $item->name,
             'heal' => $healed,
             'max_hp' => $maxHp,
             'special' => $special,
-        ], "{$participant->creature->name} РїСЂРёРјРµРЅСЏРµС‚ {$item->name}: {$effectText}.");
+        ], "{$participant->creature->name} применяет {$item->name}: {$effectText}.");
 
         return ['heal' => $healed, 'max_hp' => $maxHp, 'special' => $special];
     }
@@ -708,8 +708,8 @@ class InteractiveBattleService
             ->update(['is_available_for_battle' => true]);
 
         $summary = $isDraw
-            ? 'Р‘РѕР№ Р·Р°РІРµСЂС€РёР»СЃСЏ РЅРёС‡СЊРµР№.'
-            : 'РџРѕР±РµРґРёС‚РµР»СЊ: '.$participants->firstWhere('creature_id', $winnerId)?->creature?->name.'.';
+            ? 'Бой завершился ничьей.'
+            : 'Победитель: '.$participants->firstWhere('creature_id', $winnerId)?->creature?->name.'.';
 
         $this->event($battle, self::MAX_ROUNDS + 1, 'interactive_battle_finished', null, null, [
             'winner_creature_id' => $winnerId,
@@ -889,7 +889,7 @@ class InteractiveBattleService
     {
         if (! array_key_exists($zone, BattleAction::ZONES)) {
             throw ValidationException::withMessages([
-                $field => 'Р’С‹Р±СЂР°РЅР° РЅРµРёР·РІРµСЃС‚РЅР°СЏ Р·РѕРЅР°.',
+                $field => 'Выбрана неизвестная зона.',
             ]);
         }
 
@@ -900,7 +900,7 @@ class InteractiveBattleService
     {
         if (! $battle->isInteractive() || $battle->status !== Battle::STATUS_RUNNING) {
             throw ValidationException::withMessages([
-                'battle' => 'Р­С‚РѕС‚ Р±РѕР№ СѓР¶Рµ РЅРµ РїСЂРёРЅРёРјР°РµС‚ РґРµР№СЃС‚РІРёСЏ.',
+                'battle' => 'Этот бой уже не принимает действия.',
             ]);
         }
     }
@@ -913,7 +913,7 @@ class InteractiveBattleService
 
         if (! $inventoryItem || ! $this->isConsumableAvailableFor($inventoryItem, $user, $creature)) {
             throw ValidationException::withMessages([
-                'inventory_item_id' => 'Р­С‚РѕС‚ РїСЂРµРґРјРµС‚ РЅРµР»СЊР·СЏ РїСЂРёРјРµРЅРёС‚СЊ РІ С‚РµРєСѓС‰РµРј Р±РѕСЋ.',
+                'inventory_item_id' => 'Этот предмет нельзя применить в текущем бою.',
             ]);
         }
     }

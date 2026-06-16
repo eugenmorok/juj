@@ -25,8 +25,8 @@ class InteractiveBattleActionController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => $battle->status === Battle::STATUS_FINISHED
-                    ? 'РЁР°Рі РїСЂРёРЅСЏС‚, Р±РѕР№ Р·Р°РІРµСЂС€РµРЅ.'
-                    : 'РўР°РєС‚РёРєР° С€Р°РіР° РїСЂРёРЅСЏС‚Р°.',
+                    ? 'Шаг принят, бой завершен.'
+                    : 'Тактика шага принята.',
                 ...$interactiveBattles->statePayload($battle, $request->user(), true),
             ]);
         }

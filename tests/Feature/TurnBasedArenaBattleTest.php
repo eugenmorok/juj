@@ -66,6 +66,34 @@ class TurnBasedArenaBattleTest extends TestCase
         $this->assertTrue($battle->events()->whereIn('event_type', ['interactive_hit', 'interactive_miss', 'interactive_critical_hit'])->exists());
     }
 
+    public function test_interactive_battle_page_uses_readable_russian_text(): void
+    {
+        [$type, $species] = $this->catalog();
+        $user = User::factory()->create();
+        $botProfile = BotProfile::factory()->create(['style' => 'balanced']);
+        $creature = $this->creatureFor($user, $type, $species, ['name' => 'Reader']);
+        $botCreature = $this->creatureFor($botProfile->user, $type, $species, ['name' => 'Readable Bot']);
+        $battle = app(InteractiveBattleService::class)->start($creature, $botCreature, $user);
+
+        $eventText = $battle->events()->where('event_type', 'interactive_battle_started')->value('text_log');
+
+        $this->assertStringContainsString('Бой начинается', $eventText);
+        $this->assertStringNotContainsString('Рџ', $eventText);
+
+        $this->actingAs($user)
+            ->get(route('arena.battles.show', $battle))
+            ->assertOk()
+            ->assertSee('Пошаговый бой')
+            ->assertSee('Выбор тактики')
+            ->assertSee('Подтвердить шаг')
+            ->assertSee('Голова')
+            ->assertSee('Тело')
+            ->assertSee('Лог боя')
+            ->assertDontSee('Рџ', false)
+            ->assertDontSee('Р ', false)
+            ->assertDontSee('РЎ', false);
+    }
+
     public function test_real_players_submit_actions_before_round_is_resolved(): void
     {
         [$type, $species] = $this->catalog();

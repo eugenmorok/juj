@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => $battle->status === \App\Models\Battle::STATUS_FINISHED ? 'Р РµР·СѓР»СЊС‚Р°С‚ Р±РѕСЏ' : 'Р‘РѕР№ РЅР° Р°СЂРµРЅРµ'])
+@extends('layouts.app', ['title' => $battle->status === \App\Models\Battle::STATUS_FINISHED ? 'Результат боя' : 'Бой на арене'])
 
 @section('content')
     @php
@@ -25,28 +25,28 @@
     >
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
-                <p class="text-sm font-medium uppercase text-emerald-300">РђСЂРµРЅР°</p>
+                <p class="text-sm font-medium uppercase text-emerald-300">Арена</p>
                 <h1 class="mt-2 text-3xl font-semibold text-white">
-                    {{ $isInteractiveRunning ? 'РџРѕС€Р°РіРѕРІС‹Р№ Р±РѕР№' : 'Р РµР·СѓР»СЊС‚Р°С‚ Р±РѕСЏ' }} #{{ $battle->id }}
+                    {{ $isInteractiveRunning ? 'Пошаговый бой' : 'Результат боя' }} #{{ $battle->id }}
                 </h1>
                 <p class="mt-1 text-sm text-zinc-400">
                     Seed {{ $battle->seed }} / {{ $battle->started_at?->format('d.m.Y H:i') }}
                     @if ($battle->isInteractive())
-                        / РїРѕС€Р°РіРѕРІС‹Р№ СЂРµР¶РёРј
+                        / пошаговый режим
                     @endif
                 </p>
             </div>
             <div class="flex flex-wrap gap-2">
                 @if ($isInteractiveRunning)
                     <a href="{{ route('arena.battles.show', $battle) }}" class="rounded-md border border-emerald-500/50 px-4 py-2 text-sm text-emerald-100 hover:bg-emerald-500/10">
-                        РћР±РЅРѕРІРёС‚СЊ
+                        Обновить
                     </a>
                 @endif
                 <a href="{{ route('arena.battles.replay', $battle) }}" class="rounded-md border border-sky-500/50 px-4 py-2 text-sm text-sky-100 hover:bg-sky-500/10">
                     Replay
                 </a>
                 <a href="{{ route('arena') }}" class="rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900">
-                    Рљ Р°СЂРµРЅРµ
+                    К арене
                 </a>
             </div>
         </div>
