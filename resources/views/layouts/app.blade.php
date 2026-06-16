@@ -23,10 +23,11 @@
             $navItems = [
                 ['label' => 'Главная', 'route' => 'dashboard'],
                 ['label' => 'Профиль', 'route' => 'profile'],
-                ['label' => 'Сущности', 'route' => 'entities.index'],
+                ['label' => 'Сущности', 'route' => 'entities.index', 'active' => 'entities.*'],
                 ['label' => 'Арена', 'route' => 'arena'],
                 ['label' => 'Магазин', 'route' => 'shop'],
                 ['label' => 'Инвентарь', 'route' => 'inventory'],
+                ['label' => 'Справка', 'route' => 'help'],
             ];
         @endphp
 
@@ -83,7 +84,7 @@
                             @foreach ($navItems as $item)
                                 <a
                                     href="{{ route($item['route']) }}"
-                                    class="whitespace-nowrap rounded-md px-3 py-2 {{ request()->routeIs($item['route']) ? 'bg-emerald-500 text-zinc-950' : 'text-zinc-300 hover:bg-zinc-900 hover:text-white' }}"
+                                    class="whitespace-nowrap rounded-md px-3 py-2 {{ request()->routeIs($item['active'] ?? $item['route']) ? 'bg-emerald-500 text-zinc-950' : 'text-zinc-300 hover:bg-zinc-900 hover:text-white' }}"
                                 >
                                     {{ $item['label'] }}
                                 </a>

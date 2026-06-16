@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ArenaSetting;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -17,6 +18,14 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(CreatureCatalogSeeder::class);
+        $this->call(SkillSeeder::class);
+        $this->call(EquipmentSlotSeeder::class);
+        $this->call(ItemSeeder::class);
+        $this->call(StarterBotSeeder::class);
+
+        ArenaSetting::query()->firstOrCreate([
+            'name' => ArenaSetting::DEFAULT_NAME,
+        ], ArenaSetting::defaults());
 
         if (app()->environment('production') && ! env('ADMIN_PASSWORD')) {
             return;

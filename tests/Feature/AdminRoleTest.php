@@ -18,7 +18,9 @@ class AdminRoleTest extends TestCase
         $this->actingAs($admin)
             ->get(route('filament.admin.pages.dashboard'))
             ->assertOk()
-            ->assertSee('Dashboard');
+            ->assertSee('Инфопанель')
+            ->assertSee('Типы сущностей')
+            ->assertSee('Навыки');
     }
 
     public function test_regular_user_cannot_open_admin_page(): void
