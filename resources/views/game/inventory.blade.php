@@ -8,9 +8,14 @@
                 <h1 class="mt-2 text-3xl font-semibold text-white">Инвентарь</h1>
                 <p class="mt-1 text-sm text-zinc-400">Фильтруй общий инвентарь и предметы сущностей, затем переносите их между владельцами.</p>
             </div>
-            <span class="rounded-md border border-zinc-800 px-3 py-1 text-sm text-zinc-300">
-                {{ $playerInventory->usedSlots() }}/{{ $playerInventory->capacity() }}
-            </span>
+            <div class="flex flex-wrap gap-2">
+                <span class="rounded-md border border-emerald-500/40 px-3 py-1 text-sm text-emerald-200">
+                    {{ $user->tokens }} токенов
+                </span>
+                <span class="rounded-md border border-zinc-800 px-3 py-1 text-sm text-zinc-300">
+                    {{ $playerInventory->usedSlots() }}/{{ $playerInventory->capacity() }}
+                </span>
+            </div>
         </div>
 
         @include('partials.form-errors')
@@ -91,6 +96,7 @@
                         @foreach ($playerInventoryItems as $inventoryItem)
                             @php
                                 $item = $inventoryItem->itemInstance->item;
+                                $sellPrice = \App\Services\ShopService::sellPrice($item);
                             @endphp
                             <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -103,6 +109,7 @@
                                             @if ($item->isConsumable())
                                                 <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
                                             @endif
+                                            <span class="text-xs text-amber-300">Продажа: {{ $sellPrice }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -137,6 +144,13 @@
                                         </button>
                                     </form>
                                 @endif
+
+                                <form method="POST" action="{{ route('inventory-items.sell', $inventoryItem) }}" class="mt-3">
+                                    @csrf
+                                    <button type="submit" class="rounded-md border border-amber-500/50 px-3 py-2 text-sm text-amber-100 hover:bg-amber-500/10">
+                                        Продать за {{ $sellPrice }}
+                                    </button>
+                                </form>
                             </article>
                         @endforeach
                     </div>
@@ -187,6 +201,7 @@
                                         @foreach ($filteredItems as $inventoryItem)
                                             @php
                                                 $item = $inventoryItem->itemInstance->item;
+                                                $sellPrice = \App\Services\ShopService::sellPrice($item);
                                             @endphp
                                             <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
                                                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -199,6 +214,7 @@
                                                             @if ($item->isConsumable())
                                                                 <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
                                                             @endif
+                                                            <span class="text-xs text-amber-300">Продажа: {{ $sellPrice }}</span>
                                                         </div>
                                                     </div>
                                                     <div class="flex flex-wrap gap-2">
@@ -215,6 +231,17 @@
                                                                 @disabled(! $creature->is_available_for_battle)
                                                             >
                                                                 Забрать
+                                                            </button>
+                                                        </form>
+
+                                                        <form method="POST" action="{{ route('inventory-items.sell', $inventoryItem) }}">
+                                                            @csrf
+                                                            <button
+                                                                type="submit"
+                                                                class="rounded-md border border-amber-500/50 px-3 py-2 text-sm text-amber-100 hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                @disabled(! $creature->is_available_for_battle)
+                                                            >
+                                                                Продать за {{ $sellPrice }}
                                                             </button>
                                                         </form>
                                                     </div>

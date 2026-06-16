@@ -7,6 +7,7 @@ use App\Models\Inventory;
 use App\Models\InventoryItem;
 use App\Models\Item;
 use App\Services\ConsumableService;
+use App\Services\ShopService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -116,6 +117,13 @@ class InventoryController extends Controller
         $result = $consumables->useOnCreature($request->user(), $creature, $inventoryItem);
 
         return back()->with('status', $result['message']);
+    }
+
+    public function sell(Request $request, InventoryItem $inventoryItem, ShopService $shop): RedirectResponse
+    {
+        $earned = $shop->sellInventoryItem($request->user(), $inventoryItem);
+
+        return back()->with('status', "Предмет продан за {$earned} токенов.");
     }
 
     private function sourceInventory(Request $request, InventoryItem $inventoryItem): Inventory

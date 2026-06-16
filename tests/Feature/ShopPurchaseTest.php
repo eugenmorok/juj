@@ -150,6 +150,34 @@ class ShopPurchaseTest extends TestCase
         $this->assertSame(1, ItemInstance::query()->where('item_id', $uniqueItem->id)->count());
     }
 
+    public function test_player_can_buy_unique_item_again_after_selling_it(): void
+    {
+        $user = User::factory()->create(['tokens' => 1000, 'level' => 1]);
+        $uniqueItem = Item::factory()->unique()->create([
+            'price' => 80,
+            'required_level' => 1,
+        ]);
+        ItemInstance::factory()->create([
+            'item_id' => $uniqueItem->id,
+            'owner_user_id' => $user->id,
+            'state' => 'sold',
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('shop'))
+            ->post(route('shop.items.buy', $uniqueItem))
+            ->assertRedirect(route('shop', absolute: false))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(920, $user->refresh()->tokens);
+        $this->assertSame(2, ItemInstance::query()->where('item_id', $uniqueItem->id)->count());
+        $this->assertDatabaseHas('item_instances', [
+            'item_id' => $uniqueItem->id,
+            'owner_user_id' => $user->id,
+            'state' => 'stored',
+        ]);
+    }
+
     public function test_player_can_buy_inventory_expansion(): void
     {
         $user = User::factory()->create(['tokens' => 200, 'inventory_slots' => 5]);
