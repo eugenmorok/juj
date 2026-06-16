@@ -6,6 +6,7 @@ use App\Models\ArenaChallenge;
 use App\Models\ArenaMatchmakingSession;
 use App\Models\ArenaSetting;
 use App\Models\Battle;
+use App\Models\BattleAction;
 use App\Models\BotProfile;
 use App\Models\Creature;
 use App\Models\CreatureSpecies;
@@ -99,7 +100,10 @@ class InteractiveArenaFoundationTest extends TestCase
 
         $this->assertSame(ArenaChallenge::STATUS_BATTLE_STARTED, $challenge->status);
         $this->assertSame($battle->id, $challenge->battle_id);
-        $this->assertSame('finished', $battle->status);
+        $this->assertSame(Battle::MODE_INTERACTIVE, $battle->mode);
+        $this->assertSame(Battle::STATUS_RUNNING, $battle->status);
+        $this->assertSame(1, $battle->current_round);
+        $this->assertSame(1, BattleAction::query()->where('battle_id', $battle->id)->where('is_auto', true)->count());
     }
 
     public function test_real_player_challenge_waits_for_acceptance_and_then_starts_battle(): void
@@ -139,7 +143,8 @@ class InteractiveArenaFoundationTest extends TestCase
 
         $this->assertSame(ArenaChallenge::STATUS_BATTLE_STARTED, $challenge->status);
         $this->assertNotNull($challenge->battle_id);
-        $this->assertSame('finished', $challenge->battle->status);
+        $this->assertSame(Battle::MODE_INTERACTIVE, $challenge->battle->mode);
+        $this->assertSame(Battle::STATUS_RUNNING, $challenge->battle->status);
     }
 
     public function test_defender_can_decline_real_player_challenge(): void

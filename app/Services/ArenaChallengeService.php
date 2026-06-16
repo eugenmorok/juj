@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ArenaChallenge;
-use App\Models\Battle;
 use App\Models\Creature;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -12,8 +11,7 @@ use Illuminate\Validation\ValidationException;
 class ArenaChallengeService
 {
     public function __construct(
-        private readonly BattleEngine $battleEngine,
-        private readonly BattleRewardService $battleRewards,
+        private readonly InteractiveBattleService $interactiveBattles,
     ) {}
 
     public function create(User $challenger, Creature $challengerCreature, Creature $defenderCreature): ArenaChallenge
@@ -118,13 +116,11 @@ class ArenaChallengeService
                 return $challenge;
             }
 
-            $battle = $this->battleEngine->run(
-                leftCreature: $challenge->challengerCreature,
-                rightCreature: $challenge->defenderCreature,
-                battleType: Battle::TYPE_RANKED,
+            $battle = $this->interactiveBattles->start(
+                challengerCreature: $challenge->challengerCreature,
+                defenderCreature: $challenge->defenderCreature,
                 initiator: $challenge->challenger,
             );
-            $battle = $this->battleRewards->apply($battle);
 
             $challenge->forceFill([
                 'status' => ArenaChallenge::STATUS_BATTLE_STARTED,

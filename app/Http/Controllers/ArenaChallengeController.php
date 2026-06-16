@@ -31,7 +31,7 @@ class ArenaChallengeController extends Controller
         if ($challenge->battle_id) {
             return redirect()
                 ->route('arena.battles.show', $challenge->battle)
-                ->with('status', 'Вызов принят ботом, бой завершен текущим боевым движком.');
+                ->with('status', 'Вызов принят ботом, бой запущен. Выбери тактику шага.');
         }
 
         return redirect()
@@ -61,7 +61,7 @@ class ArenaChallengeController extends Controller
 
         return redirect()
             ->route('arena.battles.show', $challenge->battle)
-            ->with('status', 'Вызов принят, бой завершен текущим боевым движком.');
+            ->with('status', 'Вызов принят, бой запущен. Выбери тактику шага.');
     }
 
     public function decline(Request $request, ArenaChallenge $challenge, ArenaChallengeService $challenges): RedirectResponse

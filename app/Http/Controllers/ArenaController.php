@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Battle;
+use App\Models\BattleAction;
 use App\Models\Creature;
 use App\Models\ArenaChallenge;
 use App\Services\ArenaChallengeService;
 use App\Services\ArenaService;
+use App\Services\InteractiveBattleService;
 use App\Services\PowerScoreService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -67,21 +69,36 @@ class ArenaController extends Controller
             ->with('status', 'Бой завершен, награды начислены.');
     }
 
-    public function show(Request $request, Battle $battle): View
+    public function show(Request $request, Battle $battle, InteractiveBattleService $interactiveBattles): View
     {
         abort_unless(
             $battle->participants()->where('user_id', $request->user()->id)->exists(),
             404,
         );
 
-        $battle->load([
-            'participants.creature.user',
-            'events.actor',
-            'events.target',
-        ]);
+        if ($battle->isInteractive()) {
+            $battle = $interactiveBattles->prepare($battle);
+        } else {
+            $battle->load([
+                'participants.creature.user',
+                'events.actor',
+                'events.target',
+            ]);
+        }
+
+        $ownParticipant = $battle->participants->firstWhere('user_id', $request->user()->id);
+        $activeRound = $battle->rounds->firstWhere('round_number', $battle->current_round);
+        $ownAction = $activeRound?->actions->firstWhere('creature_id', $ownParticipant?->creature_id);
 
         return view('game.battles.show', [
             'battle' => $battle,
+            'activeRound' => $activeRound,
+            'ownParticipant' => $ownParticipant,
+            'ownAction' => $ownAction,
+            'zones' => BattleAction::ZONES,
+            'availableConsumables' => $battle->isInteractive() && $battle->status === Battle::STATUS_RUNNING && $ownParticipant
+                ? $interactiveBattles->availableConsumables($request->user(), $ownParticipant->creature)
+                : collect(),
         ]);
     }
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\GamePageController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\InteractiveBattleActionController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 
@@ -47,6 +48,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/arena/challenges/{challenge}/cancel', [ArenaChallengeController::class, 'cancel'])->name('arena.challenges.cancel');
     Route::post('/arena/battles', [ArenaController::class, 'start'])->name('arena.battles.start');
     Route::get('/arena/battles/{battle}', [ArenaController::class, 'show'])->name('arena.battles.show');
+    Route::post('/arena/battles/{battle}/actions', [InteractiveBattleActionController::class, 'store'])->name('arena.battles.actions.store');
     Route::get('/shop', [ShopController::class, 'index'])->name('shop');
     Route::post('/shop/items/{item}', [ShopController::class, 'buyItem'])->name('shop.items.buy');
     Route::post('/shop/inventory-slots', [ShopController::class, 'buyInventorySlot'])->name('shop.inventory-slots.buy');

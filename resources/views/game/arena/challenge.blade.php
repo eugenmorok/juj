@@ -78,7 +78,7 @@
                 </div>
             @elseif ($challenge->battle)
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <p class="text-sm text-zinc-400">Бой создан и доступен в истории.</p>
+                    <p class="text-sm text-zinc-400">Бой создан и доступен для продолжения.</p>
                     <a href="{{ route('arena.battles.show', $challenge->battle) }}" class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-emerald-400">
                         Открыть бой
                     </a>
