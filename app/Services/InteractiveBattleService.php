@@ -18,7 +18,9 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class InteractiveBattleService
 {
@@ -316,13 +318,21 @@ class InteractiveBattleService
 
         Cache::put($this->stateCacheKey($battle->id), $snapshot, now()->addSeconds(self::STATE_CACHE_TTL_SECONDS));
 
-        event(new BattleStateUpdated(
-            battleId: $battle->id,
-            status: $snapshot['status'],
-            currentRound: $snapshot['current_round'],
-            turnDeadlineAt: $snapshot['turn_deadline_at'],
-            latestEventId: $snapshot['latest_event_id'],
-        ));
+        try {
+            event(new BattleStateUpdated(
+                battleId: $battle->id,
+                status: $snapshot['status'],
+                currentRound: $snapshot['current_round'],
+                turnDeadlineAt: $snapshot['turn_deadline_at'],
+                latestEventId: $snapshot['latest_event_id'],
+            ));
+        } catch (Throwable $exception) {
+            Log::warning('Interactive battle state broadcast failed.', [
+                'battle_id' => $battle->id,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
         return $snapshot;
     }
