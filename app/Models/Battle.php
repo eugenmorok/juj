@@ -28,6 +28,8 @@ class Battle extends Model
 
     public const TYPE_RANKED = 'ranked';
 
+    public const TYPE_SIMULATION = 'simulation';
+
     public const MODE_INSTANT = 'instant';
 
     public const MODE_INTERACTIVE = 'interactive';

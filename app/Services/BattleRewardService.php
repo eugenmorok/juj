@@ -14,10 +14,15 @@ class BattleRewardService
     public function apply(Battle $battle): Battle
     {
         return DB::transaction(function () use ($battle): Battle {
-            $settings = ArenaSetting::current();
             $battle = Battle::query()
                 ->with(['participants.creature.user'])
                 ->findOrFail($battle->id);
+
+            if ($battle->battle_type === Battle::TYPE_SIMULATION) {
+                return $battle;
+            }
+
+            $settings = ArenaSetting::current();
 
             if ($battle->participants->contains(fn (BattleParticipant $participant): bool => $participant->reward_xp > 0 || $participant->reward_tokens > 0 || $participant->reward_development_points > 0)) {
                 return $battle;

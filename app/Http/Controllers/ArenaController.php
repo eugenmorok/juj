@@ -72,7 +72,7 @@ class ArenaController extends Controller
     public function show(Request $request, Battle $battle, InteractiveBattleService $interactiveBattles): View
     {
         abort_unless(
-            $battle->participants()->where('user_id', $request->user()->id)->exists(),
+            $request->user()->is_admin || $battle->participants()->where('user_id', $request->user()->id)->exists(),
             404,
         );
 
