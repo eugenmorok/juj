@@ -20,7 +20,8 @@ class AdminRoleTest extends TestCase
             ->assertOk()
             ->assertSee('Инфопанель')
             ->assertSee('Типы сущностей')
-            ->assertSee('Навыки');
+            ->assertSee('Навыки')
+            ->assertSee('Открыть');
     }
 
     public function test_regular_user_cannot_open_admin_page(): void

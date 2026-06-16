@@ -13,17 +13,26 @@ use App\Models\ArenaSetting;
 use App\Models\BalanceChangeLog;
 use App\Models\Battle;
 use Filament\Pages\Dashboard as BaseDashboard;
+use Filament\Schemas\Components\View;
+use Filament\Schemas\Schema;
 
 class Dashboard extends BaseDashboard
 {
-    protected string $view = 'filament.pages.dashboard';
-
     protected static ?string $title = 'Инфопанель';
 
+    public function content(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                View::make('filament.pages.dashboard')
+                    ->viewData($this->getDashboardData()),
+            ]);
+    }
+
     /**
-     * @return array<string, mixed>
+     * @return array{stats: array<int, array{label: string, value: int}>, links: array<int, array{label: string, description: string, route: string}>}
      */
-    protected function getViewData(): array
+    private function getDashboardData(): array
     {
         return [
             'stats' => [
