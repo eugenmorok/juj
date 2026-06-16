@@ -8,12 +8,21 @@
         'self_repair' => 'Ремонт',
         'battle_finished' => 'Итог',
         'rewards_applied' => 'Награды',
+        'interactive_battle_started' => 'Старт',
+        'round_collecting' => 'Выбор',
+        'interactive_hit' => 'Удар',
+        'interactive_critical_hit' => 'Крит',
+        'interactive_miss' => 'Промах',
+        'interactive_item_used' => 'Предмет',
+        'interactive_item_failed' => 'Сбой',
+        'interactive_battle_finished' => 'Итог',
     ][$event->event_type] ?? $event->event_type;
     $eventTone = match ($event->event_type) {
-        'critical_hit' => 'border-amber-400/60 text-amber-100',
-        'miss' => 'border-zinc-700 text-zinc-300',
-        'self_repair' => 'border-sky-400/60 text-sky-100',
-        'battle_finished', 'rewards_applied' => 'border-emerald-500/50 text-emerald-100',
+        'critical_hit', 'interactive_critical_hit' => 'border-amber-400/60 text-amber-100',
+        'miss', 'interactive_miss' => 'border-zinc-700 text-zinc-300',
+        'self_repair', 'interactive_item_used' => 'border-sky-400/60 text-sky-100',
+        'battle_finished', 'interactive_battle_finished', 'rewards_applied' => 'border-emerald-500/50 text-emerald-100',
+        'interactive_item_failed' => 'border-rose-500/50 text-rose-100',
         default => 'border-zinc-700 text-zinc-200',
     };
     $payload = $event->payload ?? [];
@@ -45,6 +54,8 @@
                     'hit_roll' => 'Бросок',
                     'roll' => 'Бросок',
                     'target_hp' => 'HP цели',
+                    'attack_zone' => 'Зона',
+                    'defense_zone' => 'Блок',
                 ] as $key => $label)
                     @if (array_key_exists($key, $payload))
                         <div class="rounded-md border border-zinc-800 px-2 py-1">

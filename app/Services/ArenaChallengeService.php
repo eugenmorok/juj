@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\ArenaChallenge;
+use App\Models\Battle;
+use App\Models\BattleParticipant;
 use App\Models\Creature;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +23,7 @@ class ArenaChallengeService
         $challengerCreature->loadMissing('user');
         $defenderCreature->loadMissing('user');
         $this->ensureCanChallenge($challenger, $challengerCreature, $defenderCreature);
+        $this->ensureNoActiveArenaCommitment($challengerCreature, $defenderCreature);
 
         $challenge = ArenaChallenge::query()->create([
             'challenger_user_id' => $challenger->id,
@@ -47,6 +50,7 @@ class ArenaChallengeService
         $challenge = $this->freshChallenge($challenge);
         abort_unless($challenge->defender_user_id === $defender->id, 404);
         $this->ensurePendingChallenge($challenge);
+        $this->ensureNoActiveArenaCommitment($challenge->challengerCreature, $challenge->defenderCreature, $challenge->id);
 
         $challenge->forceFill([
             'status' => ArenaChallenge::STATUS_ACCEPTED,
@@ -152,6 +156,32 @@ class ArenaChallengeService
         if (! $challengerCreature->is_available_for_battle || ! $defenderCreature->is_available_for_battle) {
             throw ValidationException::withMessages([
                 'arena' => 'Одна из сущностей сейчас недоступна для боя.',
+            ]);
+        }
+    }
+
+    private function ensureNoActiveArenaCommitment(Creature $challengerCreature, Creature $defenderCreature, ?int $exceptChallengeId = null): void
+    {
+        $creatureIds = [$challengerCreature->id, $defenderCreature->id];
+
+        $hasPendingChallenge = ArenaChallenge::query()
+            ->pending()
+            ->when($exceptChallengeId, fn ($query) => $query->whereKeyNot($exceptChallengeId))
+            ->where(function ($query) use ($creatureIds): void {
+                $query
+                    ->whereIn('challenger_creature_id', $creatureIds)
+                    ->orWhereIn('defender_creature_id', $creatureIds);
+            })
+            ->exists();
+
+        $hasRunningBattle = BattleParticipant::query()
+            ->whereIn('creature_id', $creatureIds)
+            ->whereHas('battle', fn ($query) => $query->where('status', Battle::STATUS_RUNNING))
+            ->exists();
+
+        if ($hasPendingChallenge || $hasRunningBattle) {
+            throw ValidationException::withMessages([
+                'arena' => 'Одна из сущностей уже ожидает вызов или находится в активном бою.',
             ]);
         }
     }

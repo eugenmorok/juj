@@ -8,9 +8,25 @@
             'draw' => 'Ничья',
         ];
         $isInteractiveRunning = $battle->isInteractive() && $battle->status === \App\Models\Battle::STATUS_RUNNING;
+        $latestEvent = $battle->events->last();
+        $battleMarker = implode('|', [
+            $battle->status,
+            $battle->current_round,
+            $latestEvent?->id ?? '',
+            $activeRound?->actions?->count() ?? '',
+            $ownAction?->id ?? '',
+        ]);
     @endphp
 
-    <div class="space-y-8">
+    <div
+        class="space-y-8"
+        @if ($isInteractiveRunning)
+            data-battle-poll
+            data-battle-state-url="{{ route('arena.battles.state', $battle) }}"
+            data-battle-marker="{{ $battleMarker }}"
+            data-battle-deadline="{{ $activeRound?->deadline_at?->toISOString() }}"
+        @endif
+    >
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
                 <p class="text-sm font-medium uppercase text-emerald-300">Арена</p>
@@ -30,6 +46,9 @@
                         Обновить
                     </a>
                 @endif
+                <a href="{{ route('arena.battles.replay', $battle) }}" class="rounded-md border border-sky-500/50 px-4 py-2 text-sm text-sky-100 hover:bg-sky-500/10">
+                    Replay
+                </a>
                 <a href="{{ route('arena') }}" class="rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-200 hover:bg-zinc-900">
                     К арене
                 </a>
@@ -47,7 +66,12 @@
                         <dl class="mt-4 grid gap-3 text-sm">
                             <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
                                 <dt class="text-zinc-500">Дедлайн</dt>
-                                <dd class="mt-1 text-zinc-100">{{ $activeRound->deadline_at?->format('H:i:s') }}</dd>
+                                <dd class="mt-1 text-zinc-100">
+                                    {{ $activeRound->deadline_at?->format('H:i:s') }}
+                                    <span class="ml-2 rounded-md border border-emerald-500/40 px-2 py-0.5 text-xs text-emerald-100" data-battle-countdown>
+                                        00:00
+                                    </span>
+                                </dd>
                             </div>
                             <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
                                 <dt class="text-zinc-500">Первый темп</dt>

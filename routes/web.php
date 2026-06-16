@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\ArenaController;
 use App\Http\Controllers\ArenaChallengeController;
 use App\Http\Controllers\ArenaMatchmakingController;
+use App\Http\Controllers\BattleReplayController;
+use App\Http\Controllers\BattleStateController;
 use App\Http\Controllers\CreatureController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentController;
@@ -48,6 +50,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/arena/challenges/{challenge}/cancel', [ArenaChallengeController::class, 'cancel'])->name('arena.challenges.cancel');
     Route::post('/arena/battles', [ArenaController::class, 'start'])->name('arena.battles.start');
     Route::get('/arena/battles/{battle}', [ArenaController::class, 'show'])->name('arena.battles.show');
+    Route::get('/arena/battles/{battle}/state', [BattleStateController::class, 'show'])->name('arena.battles.state');
+    Route::get('/arena/battles/{battle}/replay', [BattleReplayController::class, 'show'])->name('arena.battles.replay');
     Route::post('/arena/battles/{battle}/actions', [InteractiveBattleActionController::class, 'store'])->name('arena.battles.actions.store');
     Route::get('/shop', [ShopController::class, 'index'])->name('shop');
     Route::post('/shop/items/{item}', [ShopController::class, 'buyItem'])->name('shop.items.buy');
