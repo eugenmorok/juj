@@ -153,9 +153,19 @@
                                             <div class="mt-2">
                                                 @include('partials.rarity-badge', ['item' => $item])
                                             </div>
-                                            <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
+                                            <div class="mt-1 flex flex-wrap gap-2">
+                                                <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
+                                                @if ($item->isConsumable())
+                                                    <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
+                                                @endif
+                                            </div>
                                         </div>
                                         <div class="flex flex-wrap gap-2">
+                                            @include('game.inventory.partials.use-consumable-form', [
+                                                'inventoryItem' => $inventoryItem,
+                                                'targetCreature' => $creature,
+                                            ])
+
                                             @if ($item->isEquipment())
                                                 <form method="POST" action="{{ route('entities.equipment.equip', [$creature, $inventoryItem]) }}">
                                                     @csrf
@@ -206,9 +216,19 @@
                                             <div class="mt-2">
                                                 @include('partials.rarity-badge', ['item' => $item])
                                             </div>
-                                            <p class="mt-1 text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</p>
+                                            <div class="mt-1 flex flex-wrap gap-2">
+                                                <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
+                                                @if ($item->isConsumable())
+                                                    <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
+                                                @endif
+                                            </div>
                                         </div>
                                         <div class="flex flex-wrap gap-2">
+                                            @include('game.inventory.partials.use-consumable-form', [
+                                                'inventoryItem' => $inventoryItem,
+                                                'targetCreature' => $creature,
+                                            ])
+
                                             @if ($item->isEquipment())
                                                 <form method="POST" action="{{ route('entities.equipment.equip', [$creature, $inventoryItem]) }}">
                                                     @csrf

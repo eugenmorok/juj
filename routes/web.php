@@ -45,6 +45,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/shop/services/reset-skills', [ShopController::class, 'resetSkills'])->name('shop.services.reset-skills');
     Route::post('/shop/services/reset-special', [ShopController::class, 'resetSpecial'])->name('shop.services.reset-special');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory');
+    Route::post('/inventory-items/{inventoryItem}/use', [InventoryController::class, 'useItem'])->name('inventory-items.use');
     Route::post('/inventory-items/{inventoryItem}/move-to-creature', [InventoryController::class, 'moveToCreature'])->name('inventory-items.move-to-creature');
     Route::post('/inventory-items/{inventoryItem}/move-to-player', [InventoryController::class, 'moveToPlayer'])->name('inventory-items.move-to-player');
     Route::get('/help', [GamePageController::class, 'help'])->name('help');

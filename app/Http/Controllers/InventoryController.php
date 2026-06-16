@@ -6,6 +6,7 @@ use App\Models\Creature;
 use App\Models\Inventory;
 use App\Models\InventoryItem;
 use App\Models\Item;
+use App\Services\ConsumableService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -100,6 +101,21 @@ class InventoryController extends Controller
         $this->moveInventoryItem($inventoryItem, $targetInventory);
 
         return back()->with('status', 'Предмет перемещен в общий инвентарь.');
+    }
+
+    public function useItem(Request $request, InventoryItem $inventoryItem, ConsumableService $consumables): RedirectResponse
+    {
+        $attributes = $request->validate([
+            'creature_id' => ['required', 'integer', 'exists:creatures,id'],
+        ]);
+
+        $creature = Creature::query()
+            ->where('user_id', $request->user()->id)
+            ->findOrFail((int) $attributes['creature_id']);
+
+        $result = $consumables->useOnCreature($request->user(), $creature, $inventoryItem);
+
+        return back()->with('status', $result['message']);
     }
 
     private function sourceInventory(Request $request, InventoryItem $inventoryItem): Inventory

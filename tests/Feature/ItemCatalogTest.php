@@ -27,7 +27,7 @@ class ItemCatalogTest extends TestCase
         ]);
 
         $this->assertSame(10, EquipmentSlot::query()->count());
-        $this->assertSame(6, Item::query()->count());
+        $this->assertSame(8, Item::query()->count());
 
         foreach (['head', 'body', 'primary-weapon', 'neural', 'artifact', 'accessory'] as $code) {
             $this->assertDatabaseHas('equipment_slots', [

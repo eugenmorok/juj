@@ -78,6 +78,17 @@ class Item extends Model
         return in_array($this->item_type, ['equipment', 'module', 'artifact'], true);
     }
 
+    public function isConsumable(): bool
+    {
+        return in_array($this->item_type, ['potion', 'consumable'], true)
+            || $this->duration_type === 'consumable';
+    }
+
+    public function initialUses(): int
+    {
+        return max(1, (int) ($this->uses_count ?? 1));
+    }
+
     /**
      * @return list<string>
      */

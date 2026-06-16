@@ -52,7 +52,7 @@ class ShopService
                 'item_id' => $item->id,
                 'owner_user_id' => $lockedUser->id,
                 'bound_creature_id' => null,
-                'durability' => 100,
+                'durability' => $item->isConsumable() ? $item->initialUses() : 100,
                 'state' => 'stored',
             ]);
 

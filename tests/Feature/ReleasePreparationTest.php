@@ -27,7 +27,7 @@ class ReleasePreparationTest extends TestCase
         $this->assertGreaterThanOrEqual(15, CreatureSpecies::query()->count());
         $this->assertGreaterThanOrEqual(6, Skill::query()->count());
         $this->assertGreaterThanOrEqual(10, EquipmentSlot::query()->count());
-        $this->assertGreaterThanOrEqual(6, Item::query()->count());
+        $this->assertGreaterThanOrEqual(8, Item::query()->count());
 
         $this->assertDatabaseHas('users', [
             'email' => 'admin@rpg-arena.test',

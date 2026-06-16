@@ -210,6 +210,174 @@ class InventoryManagementTest extends TestCase
             ->assertDontSee('Rust Plate');
     }
 
+    public function test_player_can_use_healing_consumable_from_player_inventory(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user, ['endurance' => 8]);
+        $creature->forceFill(['current_hp' => $creature->max_hp - 40])->save();
+        $item = Item::factory()->potion()->create([
+            'name' => 'Healing Draft',
+            'bonuses' => ['heal' => 25],
+            'uses_count' => 1,
+        ]);
+        $itemInstance = ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+            'durability' => 100,
+        ]);
+        $inventoryItem = $user->ensureInventory()->addItemInstance($itemInstance);
+
+        $this->actingAs($user)
+            ->from(route('inventory'))
+            ->post(route('inventory-items.use', $inventoryItem), [
+                'creature_id' => $creature->id,
+            ])
+            ->assertRedirect(route('inventory', absolute: false))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($creature->max_hp - 15, $creature->refresh()->current_hp);
+        $this->assertDatabaseMissing('inventory_items', ['id' => $inventoryItem->id]);
+        $this->assertDatabaseHas('item_instances', [
+            'id' => $itemInstance->id,
+            'durability' => 0,
+            'state' => 'used',
+        ]);
+    }
+
+    public function test_multi_use_consumable_stays_in_inventory_until_last_charge(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user, ['endurance' => 8]);
+        $creature->forceFill(['current_hp' => $creature->max_hp - 60])->save();
+        $item = Item::factory()->potion()->create([
+            'name' => 'Two Dose Serum',
+            'bonuses' => ['heal' => 20],
+            'uses_count' => 2,
+        ]);
+        $itemInstance = ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+            'durability' => 2,
+        ]);
+        $inventoryItem = $user->ensureInventory()->addItemInstance($itemInstance);
+
+        $this->actingAs($user)
+            ->post(route('inventory-items.use', $inventoryItem), [
+                'creature_id' => $creature->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($creature->max_hp - 40, $creature->refresh()->current_hp);
+        $this->assertDatabaseHas('inventory_items', ['id' => $inventoryItem->id]);
+        $this->assertSame(1, $itemInstance->refresh()->durability);
+
+        $this->actingAs($user)
+            ->post(route('inventory-items.use', $inventoryItem), [
+                'creature_id' => $creature->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($creature->max_hp - 20, $creature->refresh()->current_hp);
+        $this->assertDatabaseMissing('inventory_items', ['id' => $inventoryItem->id]);
+        $this->assertSame('used', $itemInstance->refresh()->state);
+    }
+
+    public function test_consumable_can_increase_special_and_max_hp(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user, [
+            'strength' => 4,
+            'endurance' => 5,
+        ]);
+        $creature->forceFill(['current_hp' => $creature->max_hp - 20])->save();
+        $oldMaxHp = $creature->max_hp;
+        $item = Item::factory()->potion()->create([
+            'name' => 'Mutagen Tonic',
+            'bonuses' => ['strength' => 2, 'endurance' => 1, 'hp' => 10],
+            'uses_count' => 1,
+        ]);
+        $inventoryItem = $user->ensureInventory()->addItemInstance(ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+            'durability' => 1,
+        ]));
+
+        $this->actingAs($user)
+            ->post(route('inventory-items.use', $inventoryItem), [
+                'creature_id' => $creature->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $creature->refresh();
+
+        $this->assertSame(6, $creature->strength);
+        $this->assertSame(6, $creature->endurance);
+        $this->assertSame($oldMaxHp + 20, $creature->max_hp);
+        $this->assertSame($oldMaxHp, $creature->current_hp);
+    }
+
+    public function test_player_cannot_use_creature_inventory_consumable_on_another_creature(): void
+    {
+        $user = User::factory()->create();
+        $sourceCreature = $this->creatureFor($user, ['name' => 'Source Carrier']);
+        $targetCreature = $this->creatureFor($user, ['name' => 'Target Carrier']);
+        $targetCreature->forceFill(['current_hp' => $targetCreature->max_hp - 30])->save();
+        $item = Item::factory()->potion()->create(['bonuses' => ['heal' => 20]]);
+        $inventoryItem = $sourceCreature->ensureInventory()->addItemInstance(ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+            'durability' => 1,
+        ]));
+
+        $this->actingAs($user)
+            ->from(route('entities.show', $sourceCreature))
+            ->post(route('inventory-items.use', $inventoryItem), [
+                'creature_id' => $targetCreature->id,
+            ])
+            ->assertRedirect(route('entities.show', $sourceCreature, absolute: false))
+            ->assertSessionHasErrors('inventory');
+
+        $this->assertSame($targetCreature->max_hp - 30, $targetCreature->refresh()->current_hp);
+        $this->assertDatabaseHas('inventory_items', ['id' => $inventoryItem->id]);
+    }
+
+    public function test_player_cannot_use_foreign_consumable(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $creature = $this->creatureFor($user, ['endurance' => 8]);
+        $item = Item::factory()->potion()->create();
+        $foreignInventoryItem = $otherUser->ensureInventory()->addItemInstance(ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $otherUser->id,
+        ]));
+
+        $this->actingAs($user)
+            ->post(route('inventory-items.use', $foreignInventoryItem), [
+                'creature_id' => $creature->id,
+            ])
+            ->assertNotFound();
+    }
+
+    public function test_player_cannot_use_non_consumable_item(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user, ['endurance' => 8]);
+        $item = Item::factory()->create(['item_type' => 'equipment']);
+        $inventoryItem = $user->ensureInventory()->addItemInstance(ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+        ]));
+
+        $this->actingAs($user)
+            ->from(route('inventory'))
+            ->post(route('inventory-items.use', $inventoryItem), [
+                'creature_id' => $creature->id,
+            ])
+            ->assertRedirect(route('inventory', absolute: false))
+            ->assertSessionHasErrors('item');
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

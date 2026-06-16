@@ -100,6 +100,9 @@
                                             <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
                                             <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
                                             @include('partials.rarity-badge', ['item' => $item])
+                                            @if ($item->isConsumable())
+                                                <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -107,6 +110,11 @@
                                 @if ($item->description)
                                     <p class="mt-3 text-sm text-zinc-400">{{ $item->description }}</p>
                                 @endif
+
+                                @include('game.inventory.partials.use-consumable-form', [
+                                    'inventoryItem' => $inventoryItem,
+                                    'creatures' => $creatures,
+                                ])
 
                                 @if ($creatures->isNotEmpty())
                                     <form method="POST" action="{{ route('inventory-items.move-to-creature', $inventoryItem) }}" class="mt-4 flex flex-wrap gap-2">
@@ -188,18 +196,28 @@
                                                             <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
                                                             <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
                                                             @include('partials.rarity-badge', ['item' => $item])
+                                                            @if ($item->isConsumable())
+                                                                <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
+                                                            @endif
                                                         </div>
                                                     </div>
-                                                    <form method="POST" action="{{ route('inventory-items.move-to-player', $inventoryItem) }}">
-                                                        @csrf
-                                                        <button
-                                                            type="submit"
-                                                            class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
-                                                            @disabled(! $creature->is_available_for_battle)
-                                                        >
-                                                            Забрать
-                                                        </button>
-                                                    </form>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        @include('game.inventory.partials.use-consumable-form', [
+                                                            'inventoryItem' => $inventoryItem,
+                                                            'targetCreature' => $creature,
+                                                        ])
+
+                                                        <form method="POST" action="{{ route('inventory-items.move-to-player', $inventoryItem) }}">
+                                                            @csrf
+                                                            <button
+                                                                type="submit"
+                                                                class="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-900 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                @disabled(! $creature->is_available_for_battle)
+                                                            >
+                                                                Забрать
+                                                            </button>
+                                                        </form>
+                                                    </div>
                                                 </div>
                                             </article>
                                         @endforeach

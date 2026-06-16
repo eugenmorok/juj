@@ -70,6 +70,17 @@ class ItemInstance extends Model
         return $this->hasMany(CreatureEquipment::class);
     }
 
+    public function remainingUses(): int
+    {
+        $this->loadMissing('item');
+
+        if (! $this->item?->isConsumable()) {
+            return 0;
+        }
+
+        return min($this->item->initialUses(), max(0, (int) $this->durability));
+    }
+
     /**
      * @return array<string, string>
      */
