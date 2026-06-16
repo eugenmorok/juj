@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Battle;
-use App\Models\BattleAction;
-use App\Models\Creature;
 use App\Models\ArenaChallenge;
+use App\Models\Battle;
+use App\Models\Creature;
 use App\Services\ArenaChallengeService;
 use App\Services\ArenaService;
 use App\Services\InteractiveBattleService;
@@ -76,29 +75,10 @@ class ArenaController extends Controller
             404,
         );
 
-        if ($battle->isInteractive()) {
-            $battle = $interactiveBattles->prepare($battle);
-        } else {
-            $battle->load([
-                'participants.creature.user',
-                'events.actor',
-                'events.target',
-            ]);
-        }
-
-        $ownParticipant = $battle->participants->firstWhere('user_id', $request->user()->id);
-        $activeRound = $battle->rounds->firstWhere('round_number', $battle->current_round);
-        $ownAction = $activeRound?->actions->firstWhere('creature_id', $ownParticipant?->creature_id);
+        $viewData = $interactiveBattles->viewData($battle, $request->user());
 
         return view('game.battles.show', [
-            'battle' => $battle,
-            'activeRound' => $activeRound,
-            'ownParticipant' => $ownParticipant,
-            'ownAction' => $ownAction,
-            'zones' => BattleAction::ZONES,
-            'availableConsumables' => $battle->isInteractive() && $battle->status === Battle::STATUS_RUNNING && $ownParticipant
-                ? $interactiveBattles->availableConsumables($request->user(), $ownParticipant->creature)
-                : collect(),
+            ...$viewData,
         ]);
     }
 }

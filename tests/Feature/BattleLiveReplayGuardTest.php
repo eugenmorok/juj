@@ -38,7 +38,7 @@ class BattleLiveReplayGuardTest extends TestCase
             ->assertJsonPath('active_round.actions_count', 1);
     }
 
-    public function test_battle_state_endpoint_advances_expired_rounds(): void
+    public function test_battle_state_endpoint_does_not_advance_expired_rounds(): void
     {
         [$type, $species] = $this->catalog();
         $challenger = User::factory()->create();
@@ -53,10 +53,15 @@ class BattleLiveReplayGuardTest extends TestCase
         $this->actingAs($challenger)
             ->getJson(route('arena.battles.state', $battle))
             ->assertOk()
-            ->assertJsonPath('current_round', 2)
-            ->assertJsonPath('active_round.round_number', 2);
+            ->assertJsonPath('current_round', 1)
+            ->assertJsonPath('active_round.round_number', 1);
+
+        $this->assertSame(BattleRound::STATUS_COLLECTING, $round->refresh()->status);
+
+        app(InteractiveBattleService::class)->processBattle($battle);
 
         $this->assertSame(BattleRound::STATUS_RESOLVED, $round->refresh()->status);
+        $this->assertSame(2, $battle->refresh()->current_round);
     }
 
     public function test_replay_page_shows_round_actions_and_events(): void

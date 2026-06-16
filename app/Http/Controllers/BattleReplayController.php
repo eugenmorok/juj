@@ -16,24 +16,7 @@ class BattleReplayController extends Controller
             404,
         );
 
-        if ($battle->isInteractive()) {
-            $battle = $interactiveBattles->prepare($battle);
-        } else {
-            $battle->load([
-                'participants.creature.user',
-                'events.actor',
-                'events.target',
-            ]);
-        }
-
-        $battle->loadMissing([
-            'participants.creature.user',
-            'rounds.firstActor',
-            'rounds.actions.creature',
-            'rounds.actions.inventoryItem.itemInstance.item',
-            'events.actor',
-            'events.target',
-        ]);
+        $battle = $interactiveBattles->loadForDisplay($battle);
 
         return view('game.battles.replay', [
             'battle' => $battle,

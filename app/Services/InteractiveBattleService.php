@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Events\BattleStateUpdated;
+use App\Jobs\ResolveInteractiveBattleRound;
 use App\Models\Battle;
 use App\Models\BattleAction;
+use App\Models\BattleEvent;
 use App\Models\BattleParticipant;
 use App\Models\BattleRound;
 use App\Models\Creature;
@@ -13,6 +16,7 @@ use App\Models\ItemInstance;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -21,6 +25,8 @@ class InteractiveBattleService
     public const ACTION_SECONDS = 6;
 
     private const MAX_ROUNDS = 20;
+
+    private const STATE_CACHE_TTL_SECONDS = 43200;
 
     public function __construct(
         private readonly PowerScoreService $powerScore,
@@ -31,7 +37,7 @@ class InteractiveBattleService
     {
         $seed = random_int(1, 2_147_483_646);
 
-        return DB::transaction(function () use ($challengerCreature, $defenderCreature, $initiator, $seed): Battle {
+        $battle = DB::transaction(function () use ($challengerCreature, $defenderCreature, $initiator, $seed): Battle {
             $challengerCreature = $this->freshCreature($challengerCreature);
             $defenderCreature = $this->freshCreature($defenderCreature);
 
@@ -56,22 +62,86 @@ class InteractiveBattleService
                 'seed' => $seed,
                 'action_seconds' => self::ACTION_SECONDS,
                 'first_actor_creature_id' => $defenderCreature->id,
-            ], "Бой начинается: {$challengerCreature->name} против {$defenderCreature->name}. Первый темп у {$defenderCreature->name}.");
+            ], "Р‘РѕР№ РЅР°С‡РёРЅР°РµС‚СЃСЏ: {$challengerCreature->name} РїСЂРѕС‚РёРІ {$defenderCreature->name}. РџРµСЂРІС‹Р№ С‚РµРјРї Сѓ {$defenderCreature->name}.");
 
             $round = $this->createRound($battle, 1, $defenderCreature->id);
             $this->createBotActions($battle, $round);
 
-            return $this->loadBattle($battle);
+            if ($this->roundHasAllActions($battle, $round)) {
+                $this->dispatchRoundResolution($battle, $round, immediate: true);
+            }
+
+            return $battle;
         });
+
+        $battle = $battle->refresh();
+        $this->syncRealtimeState($battle);
+
+        return $this->loadForDisplay($battle);
     }
 
     public function prepare(Battle $battle): Battle
     {
-        if ($battle->isInteractive() && $battle->status === Battle::STATUS_RUNNING) {
-            $this->advance($battle);
-        }
+        return $this->loadForDisplay($battle->refresh());
+    }
 
-        return $this->loadBattle($battle->refresh());
+    public function processBattle(int|Battle $battle): Battle
+    {
+        $battleId = $battle instanceof Battle ? $battle->id : $battle;
+
+        DB::transaction(function () use ($battleId): void {
+            $battle = Battle::query()
+                ->whereKey($battleId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! $battle->isInteractive() || $battle->status !== Battle::STATUS_RUNNING) {
+                return;
+            }
+
+            while ($battle->status === Battle::STATUS_RUNNING) {
+                $round = $this->currentRound($battle);
+
+                if (! $round) {
+                    $firstActorId = $battle->participants()->orderBy('id')->value('creature_id');
+                    $round = $this->createRound($battle, max(1, $battle->current_round + 1), (int) $firstActorId);
+                }
+
+                $this->createBotActions($battle, $round);
+                $round = $round->refresh();
+
+                if ($round->deadline_at && $round->deadline_at->isPast()) {
+                    $this->createMissingAutoActions($battle, $round);
+                    $round = $round->refresh();
+                }
+
+                if (! $this->roundHasAllActions($battle, $round)) {
+                    break;
+                }
+
+                $this->resolveRound($battle, $round);
+
+                $battle = $battle->refresh();
+                if ($battle->status !== Battle::STATUS_RUNNING) {
+                    break;
+                }
+
+                $nextFirstActorId = $this->nextFirstActorId($battle, $round);
+                $nextRound = $this->createRound($battle, $round->round_number + 1, $nextFirstActorId);
+                $this->createBotActions($battle, $nextRound);
+
+                if (! $this->roundHasAllActions($battle, $nextRound)) {
+                    break;
+                }
+
+                $battle = $battle->refresh();
+            }
+        });
+
+        $battle = Battle::query()->findOrFail($battleId);
+        $this->syncRealtimeState($battle);
+
+        return $this->loadForDisplay($battle);
     }
 
     /**
@@ -79,25 +149,24 @@ class InteractiveBattleService
      */
     public function submitAction(User $user, Battle $battle, array $attributes): Battle
     {
-        return DB::transaction(function () use ($user, $battle, $attributes): Battle {
+        $battle = DB::transaction(function () use ($user, $battle, $attributes): Battle {
             $battle = Battle::query()
                 ->whereKey($battle->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $this->ensureInteractiveRunning($battle);
-            $this->advance($battle);
-
-            $battle = Battle::query()
-                ->whereKey($battle->id)
-                ->lockForUpdate()
-                ->firstOrFail();
             $this->ensureInteractiveRunning($battle);
 
             $round = $this->currentRound($battle);
             if (! $round?->isCollecting()) {
                 throw ValidationException::withMessages([
-                    'battle' => 'Сейчас нет активного шага для выбора тактики.',
+                    'battle' => 'РЎРµР№С‡Р°СЃ РЅРµС‚ Р°РєС‚РёРІРЅРѕРіРѕ С€Р°РіР° РґР»СЏ РІС‹Р±РѕСЂР° С‚Р°РєС‚РёРєРё.',
+                ]);
+            }
+
+            if ($round->deadline_at && $round->deadline_at->isPast()) {
+                throw ValidationException::withMessages([
+                    'battle' => 'Р’СЂРµРјСЏ РЅР° РІС‹Р±РѕСЂ С‚Р°РєС‚РёРєРё СѓР¶Рµ РёСЃС‚РµРєР»Рѕ. Р”РѕР¶РґРёС‚РµСЃСЊ РѕР±РЅРѕРІР»РµРЅРёСЏ С€Р°РіР°.',
                 ]);
             }
 
@@ -105,7 +174,7 @@ class InteractiveBattleService
 
             if (BattleAction::query()->where('battle_round_id', $round->id)->where('creature_id', $participant->creature_id)->exists()) {
                 throw ValidationException::withMessages([
-                    'battle' => 'Тактика для этого шага уже выбрана.',
+                    'battle' => 'РўР°РєС‚РёРєР° РґР»СЏ СЌС‚РѕРіРѕ С€Р°РіР° СѓР¶Рµ РІС‹Р±СЂР°РЅР°.',
                 ]);
             }
 
@@ -132,10 +201,80 @@ class InteractiveBattleService
                 'submitted_at' => now(),
             ]);
 
-            $this->advance($battle);
+            if ($this->roundHasAllActions($battle, $round)) {
+                $this->dispatchRoundResolution($battle, $round, immediate: true);
+            }
 
-            return $this->loadBattle($battle->refresh());
+            return $battle;
         });
+
+        $battle = $battle->refresh();
+        $this->syncRealtimeState($battle);
+
+        return $this->loadForDisplay($battle);
+    }
+
+    public function loadForDisplay(Battle $battle): Battle
+    {
+        return $battle->load([
+            'participants.creature.user',
+            'rounds.firstActor',
+            'rounds.actions.creature',
+            'rounds.actions.inventoryItem.itemInstance.item',
+            'events.actor',
+            'events.target',
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function statePayload(Battle $battle, User $viewer, bool $includeFragments = false): array
+    {
+        $snapshot = $this->cachedState($battle);
+        $ownParticipant = collect($snapshot['participants'])->firstWhere('user_id', $viewer->id);
+        $ownCreatureId = $ownParticipant['creature_id'] ?? null;
+        $actionCreatureIds = $snapshot['active_round']['action_creature_ids'] ?? [];
+
+        $payload = [
+            ...$snapshot,
+            'active_round' => $snapshot['active_round'] ? [
+                ...$snapshot['active_round'],
+                'own_action_submitted' => $ownCreatureId ? in_array($ownCreatureId, $actionCreatureIds, true) : false,
+            ] : null,
+        ];
+
+        $payload['marker'] = $this->battleMarker($payload);
+
+        if ($includeFragments) {
+            $payload['fragments'] = $this->renderBattleFragments($battle, $viewer);
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array{battle: Battle, activeRound: BattleRound|null, ownParticipant: BattleParticipant|null, ownAction: BattleAction|null, zones: array<string, string>, availableConsumables: Collection<int, InventoryItem>, isInteractiveRunning: bool}
+     */
+    public function viewData(Battle $battle, User $viewer): array
+    {
+        $battle = $this->loadForDisplay($battle);
+        $ownParticipant = $battle->participants->firstWhere('user_id', $viewer->id);
+        $activeRound = $battle->rounds->firstWhere('round_number', $battle->current_round);
+        $ownAction = $activeRound?->actions->firstWhere('creature_id', $ownParticipant?->creature_id);
+        $isInteractiveRunning = $battle->isInteractive() && $battle->status === Battle::STATUS_RUNNING;
+
+        return [
+            'battle' => $battle,
+            'activeRound' => $activeRound,
+            'ownParticipant' => $ownParticipant,
+            'ownAction' => $ownAction,
+            'zones' => BattleAction::ZONES,
+            'availableConsumables' => $isInteractiveRunning && $ownParticipant
+                ? $this->availableConsumables($viewer, $ownParticipant->creature)
+                : collect(),
+            'isInteractiveRunning' => $isInteractiveRunning,
+        ];
     }
 
     /**
@@ -167,42 +306,25 @@ class InteractiveBattleService
             ->values();
     }
 
-    private function advance(Battle $battle): void
+    /**
+     * @return array<string, mixed>
+     */
+    public function syncRealtimeState(Battle|int $battle): array
     {
-        DB::transaction(function () use ($battle): void {
-            $battle = Battle::query()
-                ->whereKey($battle->id)
-                ->lockForUpdate()
-                ->firstOrFail();
+        $battle = $battle instanceof Battle ? $battle->refresh() : Battle::query()->findOrFail($battle);
+        $snapshot = $this->buildStateSnapshot($battle);
 
-            if (! $battle->isInteractive() || $battle->status !== Battle::STATUS_RUNNING) {
-                return;
-            }
+        Cache::put($this->stateCacheKey($battle->id), $snapshot, now()->addSeconds(self::STATE_CACHE_TTL_SECONDS));
 
-            $round = $this->currentRound($battle);
+        event(new BattleStateUpdated(
+            battleId: $battle->id,
+            status: $snapshot['status'],
+            currentRound: $snapshot['current_round'],
+            turnDeadlineAt: $snapshot['turn_deadline_at'],
+            latestEventId: $snapshot['latest_event_id'],
+        ));
 
-            if (! $round) {
-                $firstActorId = $battle->participants()->orderBy('id')->value('creature_id');
-                $round = $this->createRound($battle, max(1, $battle->current_round + 1), (int) $firstActorId);
-            }
-
-            $this->createBotActions($battle, $round);
-
-            if ($round->deadline_at && $round->deadline_at->isPast()) {
-                $this->createMissingAutoActions($battle, $round);
-            }
-
-            if ($this->roundHasAllActions($battle, $round)) {
-                $this->resolveRound($battle, $round);
-
-                $battle = $battle->refresh();
-                if ($battle->status === Battle::STATUS_RUNNING) {
-                    $nextFirstActorId = $this->nextFirstActorId($battle, $round);
-                    $nextRound = $this->createRound($battle, $round->round_number + 1, $nextFirstActorId);
-                    $this->createBotActions($battle, $nextRound);
-                }
-            }
-        });
+        return $snapshot;
     }
 
     private function freshCreature(Creature $creature): Creature
@@ -249,11 +371,13 @@ class InteractiveBattleService
             'turn_deadline_at' => $deadline,
         ])->save();
 
-        $firstActorName = Creature::query()->whereKey($firstActorCreatureId)->value('name') ?? 'участник';
+        $firstActorName = Creature::query()->whereKey($firstActorCreatureId)->value('name') ?? 'СѓС‡Р°СЃС‚РЅРёРє';
         $this->event($battle, $roundNumber, 'round_collecting', null, null, [
             'deadline_at' => $deadline->toISOString(),
             'first_actor_creature_id' => $firstActorCreatureId,
-        ], "Шаг {$roundNumber}: выбор тактики открыт на ".self::ACTION_SECONDS." секунд. Первый темп у {$firstActorName}.");
+        ], "РЁР°Рі {$roundNumber}: РІС‹Р±РѕСЂ С‚Р°РєС‚РёРєРё РѕС‚РєСЂС‹С‚ РЅР° ".self::ACTION_SECONDS." СЃРµРєСѓРЅРґ. РџРµСЂРІС‹Р№ С‚РµРјРї Сѓ {$firstActorName}.");
+
+        $this->dispatchRoundResolution($battle, $round);
 
         return $round;
     }
@@ -405,13 +529,13 @@ class InteractiveBattleService
         $hitRoll = $this->roll($battle, $round, $attacker->creature_id, 'hit-'.$action->id, 1, 100);
 
         if ($hitRoll > $hitChance) {
-            $guardText = $sameZoneGuard ? ' Защита зоны сработала.' : '';
+            $guardText = $sameZoneGuard ? ' Р—Р°С‰РёС‚Р° Р·РѕРЅС‹ СЃСЂР°Р±РѕС‚Р°Р»Р°.' : '';
             $this->event($battle, $round->round_number, 'interactive_miss', $attacker->creature, $target->creature, [
                 'attack_zone' => $action->attack_zone,
                 'defense_zone' => $targetAction?->defense_zone,
                 'hit_chance' => $hitChance,
                 'hit_roll' => $hitRoll,
-            ], "{$attacker->creature->name} атакует в {$this->zoneLabel($action->attack_zone)}, но промахивается.{$guardText}");
+            ], "{$attacker->creature->name} Р°С‚Р°РєСѓРµС‚ РІ {$this->zoneLabel($action->attack_zone)}, РЅРѕ РїСЂРѕРјР°С…РёРІР°РµС‚СЃСЏ.{$guardText}");
 
             return;
         }
@@ -429,8 +553,8 @@ class InteractiveBattleService
             'hp_after' => max(0, $target->hp_after - $damage),
         ])->save();
 
-        $suffix = $critical ? ' Критический удар.' : '';
-        $guardText = $sameZoneGuard ? ' Урон снижен защитой зоны.' : '';
+        $suffix = $critical ? ' РљСЂРёС‚РёС‡РµСЃРєРёР№ СѓРґР°СЂ.' : '';
+        $guardText = $sameZoneGuard ? ' РЈСЂРѕРЅ СЃРЅРёР¶РµРЅ Р·Р°С‰РёС‚РѕР№ Р·РѕРЅС‹.' : '';
         $this->event($battle, $round->round_number, $critical ? 'interactive_critical_hit' : 'interactive_hit', $attacker->creature, $target->creature, [
             'attack_zone' => $action->attack_zone,
             'defense_zone' => $targetAction?->defense_zone,
@@ -440,7 +564,7 @@ class InteractiveBattleService
             'crit_chance' => $critChance,
             'crit_roll' => $critRoll,
             'target_hp' => max(0, $target->hp_after),
-        ], "{$attacker->creature->name} попадает в {$this->zoneLabel($action->attack_zone)}: {$damage} урона. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
+        ], "{$attacker->creature->name} РїРѕРїР°РґР°РµС‚ РІ {$this->zoneLabel($action->attack_zone)}: {$damage} СѓСЂРѕРЅР°. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
     }
 
     /**
@@ -461,7 +585,7 @@ class InteractiveBattleService
         if (! $inventoryItem || ! $this->isConsumableAvailableForParticipant($inventoryItem, $participant)) {
             $this->event($battle, $round->round_number, 'interactive_item_failed', $participant->creature, null, [
                 'inventory_item_id' => $action->inventory_item_id,
-            ], "{$participant->creature->name} не смог применить предмет.");
+            ], "{$participant->creature->name} РЅРµ СЃРјРѕРі РїСЂРёРјРµРЅРёС‚СЊ РїСЂРµРґРјРµС‚.");
 
             return ['heal' => 0, 'max_hp' => 0, 'special' => []];
         }
@@ -529,14 +653,14 @@ class InteractiveBattleService
             $parts[] = '+'.$value.' '.(Creature::SPECIAL_LABELS[$attribute] ?? $attribute);
         }
 
-        $effectText = $parts === [] ? 'без заметного эффекта' : implode(', ', $parts);
+        $effectText = $parts === [] ? 'Р±РµР· Р·Р°РјРµС‚РЅРѕРіРѕ СЌС„С„РµРєС‚Р°' : implode(', ', $parts);
         $this->event($battle, $round->round_number, 'interactive_item_used', $participant->creature, null, [
             'item_id' => $item->id,
             'item_name' => $item->name,
             'heal' => $healed,
             'max_hp' => $maxHp,
             'special' => $special,
-        ], "{$participant->creature->name} применяет {$item->name}: {$effectText}.");
+        ], "{$participant->creature->name} РїСЂРёРјРµРЅСЏРµС‚ {$item->name}: {$effectText}.");
 
         return ['heal' => $healed, 'max_hp' => $maxHp, 'special' => $special];
     }
@@ -574,8 +698,8 @@ class InteractiveBattleService
             ->update(['is_available_for_battle' => true]);
 
         $summary = $isDraw
-            ? 'Бой завершился ничьей.'
-            : 'Победитель: '.$participants->firstWhere('creature_id', $winnerId)?->creature?->name.'.';
+            ? 'Р‘РѕР№ Р·Р°РІРµСЂС€РёР»СЃСЏ РЅРёС‡СЊРµР№.'
+            : 'РџРѕР±РµРґРёС‚РµР»СЊ: '.$participants->firstWhere('creature_id', $winnerId)?->creature?->name.'.';
 
         $this->event($battle, self::MAX_ROUNDS + 1, 'interactive_battle_finished', null, null, [
             'winner_creature_id' => $winnerId,
@@ -755,7 +879,7 @@ class InteractiveBattleService
     {
         if (! array_key_exists($zone, BattleAction::ZONES)) {
             throw ValidationException::withMessages([
-                $field => 'Выбрана неизвестная зона.',
+                $field => 'Р’С‹Р±СЂР°РЅР° РЅРµРёР·РІРµСЃС‚РЅР°СЏ Р·РѕРЅР°.',
             ]);
         }
 
@@ -766,7 +890,7 @@ class InteractiveBattleService
     {
         if (! $battle->isInteractive() || $battle->status !== Battle::STATUS_RUNNING) {
             throw ValidationException::withMessages([
-                'battle' => 'Этот бой уже не принимает действия.',
+                'battle' => 'Р­С‚РѕС‚ Р±РѕР№ СѓР¶Рµ РЅРµ РїСЂРёРЅРёРјР°РµС‚ РґРµР№СЃС‚РІРёСЏ.',
             ]);
         }
     }
@@ -779,7 +903,7 @@ class InteractiveBattleService
 
         if (! $inventoryItem || ! $this->isConsumableAvailableFor($inventoryItem, $user, $creature)) {
             throw ValidationException::withMessages([
-                'inventory_item_id' => 'Этот предмет нельзя применить в текущем бою.',
+                'inventory_item_id' => 'Р­С‚РѕС‚ РїСЂРµРґРјРµС‚ РЅРµР»СЊР·СЏ РїСЂРёРјРµРЅРёС‚СЊ РІ С‚РµРєСѓС‰РµРј Р±РѕСЋ.',
             ]);
         }
     }
@@ -881,15 +1005,150 @@ class InteractiveBattleService
         ]);
     }
 
-    private function loadBattle(Battle $battle): Battle
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildStateSnapshot(Battle $battle): array
     {
-        return $battle->load([
-            'participants.creature.user',
-            'rounds.firstActor',
-            'rounds.actions.creature',
-            'rounds.actions.inventoryItem.itemInstance.item',
-            'events.actor',
-            'events.target',
+        $battle = Battle::query()->whereKey($battle->id)->firstOrFail();
+        $participants = BattleParticipant::query()
+            ->where('battle_id', $battle->id)
+            ->with(['creature.user'])
+            ->orderBy('id')
+            ->get();
+        $activeRound = $battle->current_round > 0
+            ? BattleRound::query()
+                ->where('battle_id', $battle->id)
+                ->where('round_number', $battle->current_round)
+                ->with(['actions:id,battle_round_id,creature_id', 'firstActor:id,name'])
+                ->first()
+            : null;
+        $latestEventId = BattleEvent::query()
+            ->where('battle_id', $battle->id)
+            ->latest('id')
+            ->value('id');
+        $eventsCount = BattleEvent::query()
+            ->where('battle_id', $battle->id)
+            ->count();
+
+        return [
+            'battle_id' => $battle->id,
+            'mode' => $battle->mode,
+            'status' => $battle->status,
+            'current_round' => $battle->current_round,
+            'turn_deadline_at' => $battle->turn_deadline_at?->toISOString(),
+            'latest_event_id' => $latestEventId ? (int) $latestEventId : null,
+            'events_count' => $eventsCount,
+            'active_round' => $activeRound ? [
+                'id' => $activeRound->id,
+                'round_number' => $activeRound->round_number,
+                'status' => $activeRound->status,
+                'deadline_at' => $activeRound->deadline_at?->toISOString(),
+                'actions_count' => $activeRound->actions->count(),
+                'action_creature_ids' => $activeRound->actions->pluck('creature_id')->map(fn ($id) => (int) $id)->values()->all(),
+                'first_actor_name' => $activeRound->firstActor?->name,
+            ] : null,
+            'participants' => $participants
+                ->map(fn (BattleParticipant $participant): array => [
+                    'user_id' => $participant->user_id,
+                    'creature_id' => $participant->creature_id,
+                    'creature_name' => $participant->creature?->name,
+                    'owner_name' => $participant->creature?->user?->name,
+                    'hp_after' => $participant->hp_after,
+                    'hp_before' => $participant->hp_before,
+                    'result' => $participant->result,
+                    'level_before' => $participant->level_before,
+                    'level_after' => $participant->level_after,
+                    'reward_xp' => $participant->reward_xp,
+                    'reward_tokens' => $participant->reward_tokens,
+                    'reward_development_points' => $participant->reward_development_points,
+                    'reward_multiplier' => $participant->reward_multiplier,
+                    'power_score_before' => $participant->power_score_before,
+                ])
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function renderBattleFragments(Battle $battle, User $viewer): array
+    {
+        $viewData = $this->viewData($battle->refresh(), $viewer);
+
+        return [
+            'action_panel_html' => view('game.battles.partials.action-panel', $viewData)->render(),
+            'participants_html' => view('game.battles.partials.participants-grid', $viewData)->render(),
+            'events_html' => view('game.battles.partials.events-log', $viewData)->render(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function cachedState(Battle $battle): array
+    {
+        return Cache::remember(
+            $this->stateCacheKey($battle->id),
+            now()->addSeconds(self::STATE_CACHE_TTL_SECONDS),
+            fn (): array => $this->buildStateSnapshot($battle),
+        );
+    }
+
+    private function stateCacheKey(int $battleId): string
+    {
+        return 'interactive-battle-state:'.$battleId;
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    private function battleMarker(array $state): string
+    {
+        $activeRound = $state['active_round'] ?? null;
+
+        return implode('|', [
+            $state['status'] ?? '',
+            $state['current_round'] ?? '',
+            $state['latest_event_id'] ?? '',
+            $activeRound['actions_count'] ?? '',
+            ($activeRound['own_action_submitted'] ?? false) ? 1 : 0,
         ]);
+    }
+
+    private function dispatchRoundResolution(Battle $battle, BattleRound $round, bool $immediate = false): void
+    {
+        $battleId = $battle->id;
+        $delaySeconds = 0;
+
+        if (! $immediate && $round->deadline_at) {
+            $delaySeconds = max(0, now()->diffInSeconds($round->deadline_at, false));
+        }
+
+        DB::afterCommit(function () use ($battleId, $delaySeconds, $immediate): void {
+            if ($immediate && $this->dispatchesSynchronously()) {
+                ResolveInteractiveBattleRound::dispatchSync($battleId);
+
+                return;
+            }
+
+            if (! $immediate && $this->dispatchesSynchronously()) {
+                return;
+            }
+
+            if ($delaySeconds > 0) {
+                ResolveInteractiveBattleRound::dispatch($battleId)->delay($delaySeconds);
+
+                return;
+            }
+
+            ResolveInteractiveBattleRound::dispatch($battleId);
+        });
+    }
+
+    private function dispatchesSynchronously(): bool
+    {
+        return config('queue.default') === 'sync';
     }
 }
