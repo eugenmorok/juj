@@ -21,6 +21,7 @@ use Illuminate\Notifications\Notifiable;
     'level',
     'xp',
     'tokens',
+    'creature_creation_points',
     'inventory_slots',
     'is_bot',
     'is_admin',
@@ -30,6 +31,14 @@ class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    public const CREATURE_CREATION_COST = 100;
+
+    public const CREATURE_CREATION_POINT_XP_COST = 10;
+
+    public const MAX_SHOP_DISCOUNT_PERCENT = 20;
+
+    public const MAX_BATTLE_SUPPORT_BONUS = 6;
 
     /**
      * Get the attributes that should be cast.
@@ -44,6 +53,7 @@ class User extends Authenticatable implements FilamentUser
             'level' => 'integer',
             'xp' => 'integer',
             'tokens' => 'integer',
+            'creature_creation_points' => 'integer',
             'inventory_slots' => 'integer',
             'is_bot' => 'boolean',
             'is_admin' => 'boolean',
@@ -66,6 +76,38 @@ class User extends Authenticatable implements FilamentUser
     public function purchasedInventorySlots(): int
     {
         return max(0, $this->inventory_slots - 5);
+    }
+
+    public function shopDiscountPercent(): int
+    {
+        return $this->is_bot
+            ? 0
+            : min(self::MAX_SHOP_DISCOUNT_PERCENT, max(0, $this->level - 1));
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function battleSupportBonus(): array
+    {
+        if ($this->is_bot) {
+            return [
+                'perception' => 0,
+                'charisma' => 0,
+                'intelligence' => 0,
+            ];
+        }
+
+        return [
+            'perception' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 4)),
+            'charisma' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 3)),
+            'intelligence' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 5)),
+        ];
+    }
+
+    public function canCreateCreature(): bool
+    {
+        return $this->creature_creation_points >= self::CREATURE_CREATION_COST;
     }
 
     /**

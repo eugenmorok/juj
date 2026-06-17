@@ -50,12 +50,20 @@
                     <dd class="mt-1 text-zinc-200">{{ $participant->hp_after }}/{{ $participant->hp_before }}</dd>
                 </div>
                 <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
-                    <dt class="text-xs text-zinc-500">XP</dt>
+                    <dt class="text-xs text-zinc-500">XP сущности</dt>
                     <dd class="mt-1 text-zinc-200">+{{ $participant->reward_xp }}</dd>
+                </div>
+                <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                    <dt class="text-xs text-zinc-500">XP игрока</dt>
+                    <dd class="mt-1 text-zinc-200">+{{ $participant->reward_player_xp }}</dd>
                 </div>
                 <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
                     <dt class="text-xs text-zinc-500">Монеты</dt>
                     <dd class="mt-1 text-zinc-200">+{{ $participant->reward_tokens }}</dd>
+                </div>
+                <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                    <dt class="text-xs text-zinc-500">Очки создания</dt>
+                    <dd class="mt-1 text-zinc-200">+{{ $participant->reward_creation_points }}</dd>
                 </div>
             </dl>
 

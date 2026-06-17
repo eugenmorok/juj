@@ -33,6 +33,7 @@ class RegisteredUserController extends Controller
             'level' => 1,
             'xp' => 0,
             'tokens' => 0,
+            'creature_creation_points' => User::CREATURE_CREATION_COST,
             'inventory_slots' => 5,
         ]);
 

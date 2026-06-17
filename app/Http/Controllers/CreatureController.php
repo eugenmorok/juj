@@ -6,11 +6,13 @@ use App\Models\Creature;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
 use App\Models\Skill;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CreatureController extends Controller
@@ -50,6 +52,8 @@ class CreatureController extends Controller
                 ->orderBy('cost')
                 ->orderBy('name')
                 ->get(),
+            'availableCreationPoints' => (int) auth()->user()->creature_creation_points,
+            'creationCost' => User::CREATURE_CREATION_COST,
         ]);
     }
 
@@ -68,8 +72,19 @@ class CreatureController extends Controller
         $maxHp = Creature::maxHpForEndurance($special['endurance']);
 
         $creature = DB::transaction(function () use ($request, $attributes, $species, $skills, $special, $maxHp): Creature {
+            $user = User::query()
+                ->whereKey($request->user()->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! $user->canCreateCreature()) {
+                throw ValidationException::withMessages([
+                    'creation_points' => 'Для создания новой сущности нужно 100 очков создания.',
+                ]);
+            }
+
             $creature = Creature::query()->create([
-                'user_id' => $request->user()->id,
+                'user_id' => $user->id,
                 'creature_type_id' => $species->creature_type_id,
                 'creature_species_id' => $species->id,
                 'name' => $attributes['name'],
@@ -89,12 +104,68 @@ class CreatureController extends Controller
             $this->attachCreationSkills($creature, $skills);
             $creature->ensureInventory();
 
+            $user->forceFill([
+                'creature_creation_points' => $user->creature_creation_points - User::CREATURE_CREATION_COST,
+            ])->save();
+
             return $creature;
         });
 
         return redirect()
             ->route('entities.show', $creature)
             ->with('status', 'Сущность создана.');
+    }
+
+    public function increaseSpecial(Request $request, Creature $creature): RedirectResponse
+    {
+        $this->authorizeCreatureOwner($request, $creature);
+
+        $attributes = $request->validate([
+            'attribute' => ['required', 'string', Rule::in(Creature::SPECIAL_ATTRIBUTES)],
+        ]);
+
+        DB::transaction(function () use ($request, $creature, $attributes): void {
+            $creature = Creature::query()
+                ->whereKey($creature->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $this->authorizeCreatureOwner($request, $creature);
+
+            if (! $creature->is_available_for_battle) {
+                throw ValidationException::withMessages([
+                    'attribute' => 'Нельзя развивать SPECIAL сущности во время боя.',
+                ]);
+            }
+
+            if ($creature->development_points < Creature::SPECIAL_DEVELOPMENT_COST) {
+                throw ValidationException::withMessages([
+                    'attribute' => 'Недостаточно очков развития.',
+                ]);
+            }
+
+            $attribute = $attributes['attribute'];
+
+            if ((int) $creature->{$attribute} >= Creature::DEVELOPMENT_SPECIAL_CAP) {
+                throw ValidationException::withMessages([
+                    'attribute' => 'Характеристика уже достигла максимума развития.',
+                ]);
+            }
+
+            $updates = [
+                $attribute => (int) $creature->{$attribute} + 1,
+                'development_points' => $creature->development_points - Creature::SPECIAL_DEVELOPMENT_COST,
+            ];
+
+            if ($attribute === 'endurance') {
+                $updates['max_hp'] = $creature->max_hp + 10;
+                $updates['current_hp'] = $creature->current_hp + 10;
+            }
+
+            $creature->forceFill($updates)->save();
+        });
+
+        return back()->with('status', 'SPECIAL улучшен. Списано очков развития: '.Creature::SPECIAL_DEVELOPMENT_COST.'.');
     }
 
     public function show(Request $request, Creature $creature): View

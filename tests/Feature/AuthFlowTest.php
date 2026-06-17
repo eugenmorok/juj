@@ -27,6 +27,7 @@ class AuthFlowTest extends TestCase
         $this->assertSame(1, $user->level);
         $this->assertSame(0, $user->xp);
         $this->assertSame(0, $user->tokens);
+        $this->assertSame(100, $user->creature_creation_points);
         $this->assertSame(5, $user->inventory_slots);
         $this->assertFalse($user->is_bot);
         $this->assertFalse($user->is_admin);

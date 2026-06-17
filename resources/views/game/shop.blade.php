@@ -12,6 +12,9 @@
                 <span class="rounded-md border border-emerald-500/40 px-3 py-2 text-emerald-100">
                     {{ $user->tokens }} токенов
                 </span>
+                <span class="rounded-md border border-sky-500/40 px-3 py-2 text-sky-100">
+                    Скидка {{ $user->shopDiscountPercent() }}%
+                </span>
                 <span class="rounded-md border border-zinc-800 px-3 py-2 text-zinc-300">
                     Инвентарь {{ $playerInventory->usedSlots() }}/{{ $playerInventory->capacity() }}
                 </span>
@@ -110,7 +113,8 @@
                         @foreach ($items as $item)
                             @php
                                 $uniqueOwned = $item->is_unique && in_array($item->id, $ownedUniqueItemIds, true);
-                                $hasTokens = $user->tokens >= $item->price;
+                                $itemPrice = \App\Services\ShopService::itemPriceFor($user, $item);
+                                $hasTokens = $user->tokens >= $itemPrice;
                                 $hasSpace = $playerInventory->hasFreeSlot();
                                 $available = $item->canBePurchasedBy($user);
                                 $canBuy = $available && $hasTokens && $hasSpace && ! $uniqueOwned;
@@ -129,7 +133,10 @@
                                         </div>
                                     </div>
                                     <span class="rounded-md border border-emerald-500/40 px-3 py-1 text-sm text-emerald-100">
-                                        {{ $item->price }} ток.
+                                        {{ $itemPrice }} ток.
+                                        @if ($itemPrice !== $item->price)
+                                            <span class="ml-1 text-xs text-zinc-400 line-through">{{ $item->price }}</span>
+                                        @endif
                                     </span>
                                 </div>
 

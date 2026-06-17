@@ -42,14 +42,15 @@ class ShopService
             $lockedUser = $this->lockedUser($user);
             $item->refresh();
             $inventory = Inventory::forUser($lockedUser);
+            $price = self::itemPriceFor($lockedUser, $item);
 
             $this->ensureItemCanBePurchased($lockedUser, $item);
-            $this->ensureEnoughTokens($lockedUser, $item->price);
+            $this->ensureEnoughTokens($lockedUser, $price);
             $this->ensureInventoryHasSpace($inventory);
             $this->ensureUniqueItemLimit($lockedUser, $item);
 
             $lockedUser->forceFill([
-                'tokens' => $lockedUser->tokens - $item->price,
+                'tokens' => $lockedUser->tokens - $price,
             ])->save();
 
             $itemInstance = ItemInstance::query()->create([
@@ -192,6 +193,17 @@ class ShopService
     public static function sellPrice(Item $item): int
     {
         return max(0, (int) floor($item->price * self::ITEM_SELL_RATE));
+    }
+
+    public static function itemPriceFor(User $user, Item $item): int
+    {
+        $discount = $user->shopDiscountPercent();
+
+        if ($discount <= 0 || $item->price <= 0) {
+            return max(0, (int) $item->price);
+        }
+
+        return max(0, (int) ceil($item->price * (100 - $discount) / 100));
     }
 
     public function renameCreature(User $user, Creature $creature, string $name): void

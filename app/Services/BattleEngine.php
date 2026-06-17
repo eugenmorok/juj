@@ -125,6 +125,11 @@ class BattleEngine
     {
         $bonuses = $creature->equipmentBonuses();
         $special = $creature->effectiveSpecialValues();
+
+        foreach (($creature->user?->battleSupportBonus() ?? []) as $attribute => $value) {
+            $special[$attribute] = ($special[$attribute] ?? 0) + $value;
+        }
+
         $maxHp = max(1, 50 + ($special['endurance'] * 10) + ($creature->level * 5) + (int) ($bonuses['hp'] ?? 0));
 
         return [
@@ -201,7 +206,13 @@ class BattleEngine
         $this->applySelfRepair($battle, $attacker, $round);
 
         $hitChance = $this->clamp(
-            (int) round(60 + ((int) $attacker['special']['perception'] * 1.5) - (int) $defender['special']['agility']),
+            (int) round(
+                58
+                + ((int) $attacker['special']['perception'] * 1.45)
+                + ((int) $attacker['special']['intelligence'] * 0.45)
+                - ((int) $defender['special']['agility'] * 0.9)
+                - ((int) $defender['special']['intelligence'] * 0.2)
+            ),
             20,
             95,
         );
@@ -235,11 +246,15 @@ class BattleEngine
             $damage += 3;
         }
 
+        [$damage, $mitigated] = $this->applyComposureMitigation($damage, $defender);
+
         $defender['hp'] = max(0, $defender['hp'] - $damage);
 
         $suffix = $isCrit ? ' Критический удар.' : '';
+        $suffix .= $mitigated ? ' Собранность цели смягчила удар.' : '';
         $this->event($battle, $round, $isCrit ? 'critical_hit' : 'hit', $attackerCreature, $defenderCreature, [
             'damage' => $damage,
+            'composure_mitigation' => $mitigated,
             'hit_chance' => $hitChance,
             'hit_roll' => $hitRoll,
             'crit_chance' => $critChance,
@@ -269,15 +284,37 @@ class BattleEngine
     }
 
     /**
+     * @param  array<string, mixed>  $defender
+     * @return array{0: int, 1: bool}
+     */
+    private function applyComposureMitigation(int $damage, array $defender): array
+    {
+        $chance = $this->clamp(
+            (int) round(4 + ((int) $defender['special']['charisma'] * 1.1) + ((int) $defender['special']['intelligence'] * 0.35)),
+            5,
+            40,
+        );
+
+        if ($this->roll(1, 100) > $chance) {
+            return [$damage, false];
+        }
+
+        return [max(1, (int) floor($damage * 0.82)), true];
+    }
+
+    /**
      * @param  array<string, mixed>  $attacker
      * @param  array<string, mixed>  $defender
      */
     private function damage(array $attacker, array $defender): int
     {
         $baseDamage = ((int) $attacker['special']['strength'] * 1.5)
+            + ((int) $attacker['special']['intelligence'] * 0.25)
             + (int) ($attacker['bonuses']['damage'] ?? 0)
             + $this->roll(1, 6);
         $defense = ((int) $defender['special']['endurance'] * 0.5)
+            + ((int) $defender['special']['charisma'] * 0.25)
+            + ((int) $defender['special']['intelligence'] * 0.15)
             + (int) ($defender['bonuses']['armor'] ?? 0);
 
         if (in_array('thick-hide', $defender['skills'], true)) {
@@ -300,6 +337,7 @@ class BattleEngine
     private function critChance(array $attacker): int
     {
         $chance = ((int) $attacker['special']['luck'] * 0.8)
+            + ((int) $attacker['special']['perception'] * 0.12)
             + (int) ($attacker['bonuses']['crit_chance'] ?? 0);
 
         if (in_array('critical-instinct', $attacker['skills'], true)) {

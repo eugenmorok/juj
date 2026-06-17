@@ -7,7 +7,7 @@
             <h1 class="mt-2 text-3xl font-semibold text-white">{{ $user->name }}</h1>
         </div>
 
-        <section class="grid gap-4 md:grid-cols-4">
+        <section class="grid gap-4 md:grid-cols-5">
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Уровень</div>
                 <div class="mt-2 text-3xl font-semibold text-white">{{ $user->level }}</div>
@@ -19,6 +19,10 @@
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Токены</div>
                 <div class="mt-2 text-3xl font-semibold text-white">{{ $user->tokens }}</div>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                <div class="text-sm text-zinc-400">Очки создания</div>
+                <div class="mt-2 text-3xl font-semibold text-white">{{ $user->creature_creation_points }}</div>
             </div>
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Инвентарь</div>

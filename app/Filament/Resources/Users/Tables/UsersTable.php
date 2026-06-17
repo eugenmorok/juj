@@ -39,6 +39,9 @@ class UsersTable
                 TextColumn::make('tokens')
                     ->label('Токены')
                     ->sortable(),
+                TextColumn::make('creature_creation_points')
+                    ->label('Очки создания')
+                    ->sortable(),
                 TextColumn::make('inventory_state')
                     ->label('Инвентарь')
                     ->state(function (User $record): string {

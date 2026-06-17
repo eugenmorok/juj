@@ -537,7 +537,15 @@ class InteractiveBattleService
 
         $sameZoneGuard = $targetAction?->defense_zone === $action->attack_zone;
         $hitChance = $this->clamp(
-            (int) round(66 + ($attackerSpecial['perception'] * 1.4) - ($targetSpecial['agility'] * 0.8) - ($sameZoneGuard ? 24 : 0) + $this->zoneHitModifier($action->attack_zone)),
+            (int) round(
+                64
+                + ($attackerSpecial['perception'] * 1.35)
+                + ($attackerSpecial['intelligence'] * 0.45)
+                - ($targetSpecial['agility'] * 0.85)
+                - ($targetSpecial['intelligence'] * 0.2)
+                - ($sameZoneGuard ? 24 : 0)
+                + $this->zoneHitModifier($action->attack_zone)
+            ),
             15,
             95,
         );
@@ -556,7 +564,7 @@ class InteractiveBattleService
         }
 
         $damage = $this->damage($attackerSpecial, $targetSpecial, $action->attack_zone, $sameZoneGuard);
-        $critChance = $this->clamp((int) round(4 + ($attackerSpecial['luck'] * 0.8)), 3, 45);
+        $critChance = $this->clamp((int) round(4 + ($attackerSpecial['luck'] * 0.75) + ($attackerSpecial['perception'] * 0.12) - ($targetSpecial['charisma'] * 0.2)), 3, 45);
         $critRoll = $this->roll($battle, $round, $attacker->creature_id, 'crit-'.$action->id, 1, 100);
         $critical = $critRoll <= $critChance;
 
@@ -564,16 +572,30 @@ class InteractiveBattleService
             $damage = (int) ceil($damage * 1.45);
         }
 
+        [$damage, $mitigated, $mitigationChance, $mitigationRoll] = $this->applyComposureMitigation(
+            $battle,
+            $round,
+            $target,
+            $action,
+            $targetSpecial,
+            $sameZoneGuard,
+            $damage,
+        );
+
         $target->forceFill([
             'hp_after' => max(0, $target->hp_after - $damage),
         ])->save();
 
         $suffix = $critical ? ' Критический удар.' : '';
+        $suffix .= $mitigated ? ' Собранность цели смягчила удар.' : '';
         $guardText = $sameZoneGuard ? ' Урон снижен защитой зоны.' : '';
         $this->event($battle, $round->round_number, $critical ? 'interactive_critical_hit' : 'interactive_hit', $attacker->creature, $target->creature, [
             'attack_zone' => $action->attack_zone,
             'defense_zone' => $targetAction?->defense_zone,
             'damage' => $damage,
+            'composure_mitigation' => $mitigated,
+            'composure_chance' => $mitigationChance,
+            'composure_roll' => $mitigationRoll,
             'hit_chance' => $hitChance,
             'hit_roll' => $hitRoll,
             'crit_chance' => $critChance,
@@ -850,6 +872,10 @@ class InteractiveBattleService
     {
         $values = $participant->creature->effectiveSpecialValues();
 
+        foreach (($participant->creature->user?->battleSupportBonus() ?? []) as $attribute => $value) {
+            $values[$attribute] = ($values[$attribute] ?? 0) + $value;
+        }
+
         foreach ($roundBonus as $attribute => $value) {
             $values[$attribute] = ($values[$attribute] ?? 0) + $value;
         }
@@ -858,13 +884,46 @@ class InteractiveBattleService
     }
 
     /**
+     * @param  array<string, int>  $targetSpecial
+     * @return array{0: int, 1: bool, 2: int, 3: int}
+     */
+    private function applyComposureMitigation(
+        Battle $battle,
+        BattleRound $round,
+        BattleParticipant $target,
+        BattleAction $action,
+        array $targetSpecial,
+        bool $guarded,
+        int $damage,
+    ): array {
+        $chance = $this->clamp(
+            (int) round(4 + ($targetSpecial['charisma'] * 1.1) + ($targetSpecial['intelligence'] * 0.35) + ($guarded ? 4 : 0)),
+            5,
+            45,
+        );
+        $roll = $this->roll($battle, $round, $target->creature_id, 'composure-'.$action->id, 1, 100);
+
+        if ($roll > $chance) {
+            return [$damage, false, $chance, $roll];
+        }
+
+        return [max(1, (int) floor($damage * 0.82)), true, $chance, $roll];
+    }
+
+    /**
      * @param  array<string, int>  $attackerSpecial
      * @param  array<string, int>  $targetSpecial
      */
     private function damage(array $attackerSpecial, array $targetSpecial, string $zone, bool $guarded): int
     {
-        $base = 4 + ($attackerSpecial['strength'] * 1.35) + ($attackerSpecial['agility'] * 0.35);
-        $defense = ($targetSpecial['endurance'] * 0.55) + ($guarded ? 7 : 0);
+        $base = 4
+            + ($attackerSpecial['strength'] * 1.3)
+            + ($attackerSpecial['agility'] * 0.35)
+            + ($attackerSpecial['intelligence'] * 0.25);
+        $defense = ($targetSpecial['endurance'] * 0.55)
+            + ($targetSpecial['charisma'] * 0.25)
+            + ($targetSpecial['intelligence'] * ($guarded ? 0.28 : 0.15))
+            + ($guarded ? 7 : 0);
         $zoneMultiplier = match ($zone) {
             'head' => 1.35,
             'arms' => 0.9,
@@ -1084,10 +1143,14 @@ class InteractiveBattleService
                     'level_before' => $participant->level_before,
                     'level_after' => $participant->level_after,
                     'reward_xp' => $participant->reward_xp,
+                    'reward_player_xp' => $participant->reward_player_xp,
                     'reward_tokens' => $participant->reward_tokens,
                     'reward_development_points' => $participant->reward_development_points,
+                    'reward_creation_points' => $participant->reward_creation_points,
                     'reward_multiplier' => $participant->reward_multiplier,
                     'power_score_before' => $participant->power_score_before,
+                    'player_level_before' => $participant->player_level_before,
+                    'player_level_after' => $participant->player_level_after,
                 ])
                 ->values()
                 ->all(),

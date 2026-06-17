@@ -43,6 +43,10 @@ class Creature extends Model
 
     public const STARTER_SPECIAL_CAP = 20;
 
+    public const DEVELOPMENT_SPECIAL_CAP = 50;
+
+    public const SPECIAL_DEVELOPMENT_COST = 25;
+
     public const STARTER_INVENTORY_SLOTS = 5;
 
     public const BASE_SKILL_LIMIT = 2;

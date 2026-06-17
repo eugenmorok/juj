@@ -49,8 +49,10 @@ class ArenaBattleTest extends TestCase
 
         $this->assertSame('finished', $battle->status);
         $this->assertGreaterThan(0, $participant->reward_xp);
+        $this->assertGreaterThan(0, $participant->reward_player_xp);
         $this->assertGreaterThan(0, $participant->reward_tokens);
         $this->assertGreaterThan(0, $user->refresh()->tokens);
+        $this->assertGreaterThan(0, $user->xp);
         $this->assertGreaterThan(0, $creature->refresh()->wins);
     }
 

@@ -77,6 +77,7 @@ class CreatureCreationTest extends TestCase
         $this->assertSame(7, $creature->perception);
         $this->assertSame(8, $creature->endurance);
         $this->assertSame(Creature::maxHpForEndurance(8), $creature->max_hp);
+        $this->assertSame(0, $user->refresh()->creature_creation_points);
 
         $this->assertDatabaseHas('creature_skills', [
             'creature_id' => $creature->id,
@@ -84,6 +85,85 @@ class CreatureCreationTest extends TestCase
             'cost_paid' => 18,
             'source' => 'creation',
         ]);
+    }
+
+    public function test_player_cannot_create_second_creature_without_creation_points(): void
+    {
+        $user = User::factory()->create();
+        $species = $this->starterSpecies();
+
+        $this->actingAs($user)
+            ->post(route('entities.store'), $this->creationPayload($species))
+            ->assertRedirect();
+
+        $this->actingAs($user)
+            ->from(route('entities.create'))
+            ->post(route('entities.store'), $this->creationPayload($species, [
+                'name' => 'Вторая сущность',
+            ]))
+            ->assertRedirect(route('entities.create', absolute: false))
+            ->assertSessionHasErrors('creation_points');
+
+        $this->assertDatabaseCount('creatures', 1);
+    }
+
+    public function test_player_can_spend_development_points_to_improve_special(): void
+    {
+        $user = User::factory()->create();
+        $species = $this->starterSpecies();
+        $creature = Creature::factory()->create([
+            'user_id' => $user->id,
+            'creature_type_id' => $species->creature_type_id,
+            'creature_species_id' => $species->id,
+            'strength' => 10,
+            'endurance' => 10,
+            'current_hp' => Creature::maxHpForEndurance(10),
+            'max_hp' => Creature::maxHpForEndurance(10),
+            'development_points' => Creature::SPECIAL_DEVELOPMENT_COST,
+            'is_available_for_battle' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('entities.show', $creature))
+            ->post(route('entities.special.increase', $creature), [
+                'attribute' => 'strength',
+            ])
+            ->assertRedirect(route('entities.show', $creature, absolute: false))
+            ->assertSessionHasNoErrors();
+
+        $creature->refresh();
+
+        $this->assertSame(11, $creature->strength);
+        $this->assertSame(0, $creature->development_points);
+    }
+
+    public function test_endurance_improvement_increases_creature_hp(): void
+    {
+        $user = User::factory()->create();
+        $species = $this->starterSpecies();
+        $creature = Creature::factory()->create([
+            'user_id' => $user->id,
+            'creature_type_id' => $species->creature_type_id,
+            'creature_species_id' => $species->id,
+            'strength' => 10,
+            'endurance' => 10,
+            'current_hp' => 150,
+            'max_hp' => 150,
+            'development_points' => Creature::SPECIAL_DEVELOPMENT_COST,
+            'is_available_for_battle' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('entities.special.increase', $creature), [
+                'attribute' => 'endurance',
+            ])
+            ->assertRedirect();
+
+        $creature->refresh();
+
+        $this->assertSame(11, $creature->endurance);
+        $this->assertSame(160, $creature->max_hp);
+        $this->assertSame(160, $creature->current_hp);
     }
 
     public function test_player_cannot_create_creature_below_species_base(): void

@@ -12,11 +12,13 @@ class PowerScoreService
     {
         $settings ??= ArenaSetting::current();
         $creature->loadMissing([
+            'user',
             'skills',
             'equipmentRows.itemInstance.item',
         ]);
 
-        $specialScore = array_sum($creature->effectiveSpecialValues());
+        $specialScore = array_sum($creature->effectiveSpecialValues())
+            + (array_sum($creature->user?->battleSupportBonus() ?? []) * 1.5);
         $levelScore = $creature->level * $settings->power_score_level_weight;
         $skillScore = $creature->skills->sum(
             fn ($skill): int => (int) ($skill->pivot?->cost_paid ?: $skill->cost)

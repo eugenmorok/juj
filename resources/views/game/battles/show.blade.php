@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => $battle->status === \App\Models\Battle::STATUS_FINISHED ? 'Результат боя' : 'Бой на арене'])
+@extends('layouts.app', ['title' => $battle->status === \App\Models\Battle::STATUS_FINISHED ? 'Результат боя' : 'Бой на арене', 'wide' => true])
 
 @section('content')
     @php
@@ -61,7 +61,7 @@
             @include('game.battles.partials.participants-grid', ['battle' => $battle])
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
+        <div class="grid gap-6 xl:grid-cols-[minmax(28rem,0.85fr)_minmax(34rem,1.15fr)]">
             <div data-battle-action-panel>
                 @include('game.battles.partials.action-panel', [
                     'battle' => $battle,

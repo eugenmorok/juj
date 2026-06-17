@@ -16,6 +16,7 @@
     $selectedSpeciesId = (int) old('creature_species_id', $firstSpecies['id'] ?? 0);
     $selectedSpecies = $speciesPayload->firstWhere('id', $selectedSpeciesId) ?? $firstSpecies;
     $selectedTypeId = (int) ($selectedSpecies['typeId'] ?? 0);
+    $canCreateCreature = $availableCreationPoints >= $creationCost;
 @endphp
 
 @extends('layouts.app', ['title' => 'Создание сущности'])
@@ -33,6 +34,15 @@
         </div>
 
         @include('partials.form-errors')
+
+        <div class="rounded-md border {{ $canCreateCreature ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100' : 'border-amber-500/40 bg-amber-500/10 text-amber-100' }} px-4 py-3 text-sm">
+            Очки создания: {{ $availableCreationPoints }}/{{ $creationCost }}.
+            @if (! $canCreateCreature)
+                Для новой сущности накопи 100 очков создания или конвертируй XP игрока в профиле.
+            @else
+                При создании сущности будет списано {{ $creationCost }} очков создания.
+            @endif
+        </div>
 
         @if ($speciesPayload->isEmpty())
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-8 text-center">
@@ -171,6 +181,10 @@
                                 <dd class="font-semibold text-white">{{ \App\Models\Creature::CREATION_POINTS }}</dd>
                             </div>
                             <div class="flex justify-between gap-4">
+                                <dt class="text-zinc-400">Баланс игрока</dt>
+                                <dd class="font-semibold text-white">{{ $availableCreationPoints }}/{{ $creationCost }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
                                 <dt class="text-zinc-400">SPECIAL</dt>
                                 <dd class="font-semibold text-white" data-stats-cost>0</dd>
                             </div>
@@ -199,7 +213,7 @@
                         </dl>
                     </section>
 
-                    <button type="submit" data-creature-submit class="w-full rounded-md bg-emerald-500 px-4 py-3 font-medium text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="submit" data-creature-submit class="w-full rounded-md bg-emerald-500 px-4 py-3 font-medium text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50" @disabled(! $canCreateCreature)>
                         Создать сущность
                     </button>
                 </aside>
@@ -219,6 +233,7 @@
             const skills = @js($skillsPayload);
             const creationPoints = {{ \App\Models\Creature::CREATION_POINTS }};
             const skillLimit = {{ \App\Models\Creature::BASE_SKILL_LIMIT }};
+            const canCreateCreature = @js($canCreateCreature);
             const typeSelect = root.querySelector('[data-creature-type-select]');
             const speciesSelect = root.querySelector('[data-creature-species-select]');
             const specialInputs = [...root.querySelectorAll('[data-special-input]')];
@@ -325,7 +340,7 @@
                 selectedSkillCountNode.textContent = selectedSkillCount;
 
                 const remaining = creationPoints - statsCost - skillsCost;
-                const invalid = remaining < 0 || selectedSkillCount > skillLimit;
+                const invalid = !canCreateCreature || remaining < 0 || selectedSkillCount > skillLimit;
 
                 remainingNode.textContent = remaining;
                 remainingNode.classList.toggle('text-red-100', invalid);

@@ -42,12 +42,17 @@ class ShopController extends Controller
             ->when($filters['max_price'] ?? null, fn ($query, int $price) => $query->where('price', '<=', $price))
             ->when($filters['level'] ?? null, fn ($query, int $level) => $query->where('required_level', '<=', $level))
             ->when(($filters['available'] ?? null) === '1', fn ($query) => $query
-                ->where('required_level', '<=', $user->level)
-                ->where('price', '<=', $user->tokens))
+                ->where('required_level', '<=', $user->level))
             ->orderBy('price')
             ->orderBy('required_level')
             ->orderBy('name')
             ->get();
+
+        if (($filters['available'] ?? null) === '1') {
+            $items = $items
+                ->filter(fn (Item $item): bool => ShopService::itemPriceFor($user, $item) <= $user->tokens)
+                ->values();
+        }
 
         return view('game.shop', [
             'user' => $user,

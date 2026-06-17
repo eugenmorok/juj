@@ -7,9 +7,14 @@
                 <p class="text-sm font-medium uppercase text-emerald-300">Пул сущностей</p>
                 <h1 class="mt-2 text-3xl font-semibold text-white">Сущности</h1>
             </div>
-            <a href="{{ route('entities.create') }}" class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950 hover:bg-emerald-400">
-                Создать сущность
-            </a>
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-md border border-zinc-800 px-3 py-2 text-sm text-zinc-300">
+                    Очки создания {{ auth()->user()->creature_creation_points }}/{{ \App\Models\User::CREATURE_CREATION_COST }}
+                </span>
+                <a href="{{ route('entities.create') }}" class="rounded-md bg-emerald-500 px-4 py-2 font-medium text-zinc-950 hover:bg-emerald-400">
+                    Создать сущность
+                </a>
+            </div>
         </div>
 
         <section class="space-y-4">

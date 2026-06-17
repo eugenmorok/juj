@@ -33,10 +33,12 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [GamePageController::class, 'profile'])->name('profile');
+    Route::post('/profile/creation-points/convert', [GamePageController::class, 'convertCreationPoints'])->name('profile.creation-points.convert');
     Route::get('/entities', [CreatureController::class, 'index'])->name('entities.index');
     Route::get('/entities/create', [CreatureController::class, 'create'])->name('entities.create');
     Route::post('/entities', [CreatureController::class, 'store'])->name('entities.store');
     Route::get('/entities/{creature}', [CreatureController::class, 'show'])->name('entities.show');
+    Route::post('/entities/{creature}/special', [CreatureController::class, 'increaseSpecial'])->name('entities.special.increase');
     Route::post('/entities/{creature}/skills/{skill}', [CreatureController::class, 'buySkill'])->name('entities.skills.purchase');
     Route::get('/entities/{creature}/equipment', [EquipmentController::class, 'show'])->name('entities.equipment');
     Route::post('/entities/{creature}/equipment/{inventoryItem}', [EquipmentController::class, 'equip'])->name('entities.equipment.equip');

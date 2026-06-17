@@ -60,6 +60,23 @@ class ShopPurchaseTest extends TestCase
         $this->assertSame(1, $inventory->refresh()->inventoryItems()->count());
     }
 
+    public function test_player_level_discount_reduces_item_purchase_price(): void
+    {
+        $user = User::factory()->create([
+            'tokens' => 100,
+            'level' => 11,
+        ]);
+        $item = Item::factory()->create(['price' => 100, 'required_level' => 1]);
+
+        $this->actingAs($user)
+            ->from(route('shop'))
+            ->post(route('shop.items.buy', $item))
+            ->assertRedirect(route('shop', absolute: false))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(10, $user->refresh()->tokens);
+    }
+
     public function test_shop_search_and_available_filter_hide_unavailable_items(): void
     {
         $user = User::factory()->create(['tokens' => 300, 'level' => 1]);

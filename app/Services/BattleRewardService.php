@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class BattleRewardService
 {
+    public function __construct(
+        private readonly PlayerProgressService $playerProgress,
+    ) {}
+
     public function apply(Battle $battle): Battle
     {
         return DB::transaction(function () use ($battle): Battle {
@@ -24,7 +28,7 @@ class BattleRewardService
 
             $settings = ArenaSetting::current();
 
-            if ($battle->participants->contains(fn (BattleParticipant $participant): bool => $participant->reward_xp > 0 || $participant->reward_tokens > 0 || $participant->reward_development_points > 0)) {
+            if ($battle->participants->contains(fn (BattleParticipant $participant): bool => $participant->reward_xp > 0 || $participant->reward_player_xp > 0 || $participant->reward_tokens > 0 || $participant->reward_development_points > 0 || $participant->reward_creation_points > 0)) {
                 return $battle;
             }
 
@@ -42,6 +46,7 @@ class BattleRewardService
                 $rewardXp = (int) floor($baseRewards['xp'] * $multiplier);
                 $rewardDevelopmentPoints = (int) floor($baseRewards['development_points'] * $multiplier);
                 $rewardTokens = (int) floor($baseRewards['tokens'] * $multiplier);
+                $opponentLevel = max(1, $opponent->level_before);
 
                 $user = User::query()
                     ->whereKey($participant->user_id)
@@ -53,6 +58,14 @@ class BattleRewardService
                     ->firstOrFail();
 
                 $levelBefore = $creature->level;
+                $playerProgress = $this->playerProgress->applyBattleProgress(
+                    $user,
+                    $participant->result,
+                    $opponentLevel,
+                    $multiplier,
+                    (int) $battle->seed,
+                    (int) $participant->id,
+                );
 
                 $user->forceFill([
                     'tokens' => $user->tokens + $rewardTokens,
@@ -62,11 +75,15 @@ class BattleRewardService
 
                 $participant->forceFill([
                     'reward_xp' => $rewardXp,
+                    'reward_player_xp' => $playerProgress['player_xp'],
                     'reward_tokens' => $rewardTokens,
                     'reward_development_points' => $rewardDevelopmentPoints,
+                    'reward_creation_points' => $playerProgress['creation_points'],
                     'reward_multiplier' => $multiplier,
                     'level_before' => $levelBefore,
                     'level_after' => $creature->level,
+                    'player_level_before' => $playerProgress['level_before'],
+                    'player_level_after' => $playerProgress['level_after'],
                 ])->save();
             }
 
@@ -189,7 +206,7 @@ class BattleRewardService
     private function rewardEvent(Battle $battle): void
     {
         $lines = $battle->participants
-            ->map(fn (BattleParticipant $participant): string => "{$participant->creature->name}: +{$participant->reward_xp} XP, +{$participant->reward_development_points} очков развития, +{$participant->reward_tokens} токенов.")
+            ->map(fn (BattleParticipant $participant): string => "{$participant->creature->name}: +{$participant->reward_xp} XP сущности, +{$participant->reward_player_xp} XP игрока, +{$participant->reward_development_points} очков развития, +{$participant->reward_tokens} токенов, +{$participant->reward_creation_points} очков создания.")
             ->implode(' ');
 
         $battle->events()->create([
@@ -200,8 +217,10 @@ class BattleRewardService
                     ->map(fn (BattleParticipant $participant): array => [
                         'creature_id' => $participant->creature_id,
                         'reward_xp' => $participant->reward_xp,
+                        'reward_player_xp' => $participant->reward_player_xp,
                         'reward_tokens' => $participant->reward_tokens,
                         'reward_development_points' => $participant->reward_development_points,
+                        'reward_creation_points' => $participant->reward_creation_points,
                         'reward_multiplier' => $participant->reward_multiplier,
                     ])
                     ->values()

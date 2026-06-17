@@ -20,9 +20,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'level_before',
     'level_after',
     'reward_xp',
+    'reward_player_xp',
     'reward_tokens',
     'reward_development_points',
+    'reward_creation_points',
     'reward_multiplier',
+    'player_level_before',
+    'player_level_after',
 ])]
 class BattleParticipant extends Model
 {
@@ -74,9 +78,13 @@ class BattleParticipant extends Model
             'level_before' => 'integer',
             'level_after' => 'integer',
             'reward_xp' => 'integer',
+            'reward_player_xp' => 'integer',
             'reward_tokens' => 'integer',
             'reward_development_points' => 'integer',
+            'reward_creation_points' => 'integer',
             'reward_multiplier' => 'decimal:2',
+            'player_level_before' => 'integer',
+            'player_level_after' => 'integer',
         ];
     }
 }

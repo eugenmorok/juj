@@ -68,6 +68,7 @@ class BotProfile extends Model
                 'level' => max(1, (int) $profile->min_level),
                 'xp' => 0,
                 'tokens' => 0,
+                'creature_creation_points' => 0,
                 'inventory_slots' => 5,
                 'is_bot' => true,
                 'is_admin' => false,
@@ -78,6 +79,7 @@ class BotProfile extends Model
             $profile->user?->forceFill([
                 'name' => $profile->display_name,
                 'level' => max(1, (int) $profile->min_level),
+                'creature_creation_points' => 0,
                 'is_bot' => true,
                 'is_admin' => false,
             ])->save();
