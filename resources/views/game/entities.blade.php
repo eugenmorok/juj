@@ -33,9 +33,12 @@
                     @foreach ($creatures as $creature)
                         <a href="{{ route('entities.show', $creature) }}" class="rounded-md border border-zinc-800 bg-zinc-900 p-5 hover:border-emerald-500/60">
                             <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                    <h3 class="text-lg font-semibold text-white">{{ $creature->name }}</h3>
-                                    <p class="mt-1 text-sm text-zinc-400">{{ $creature->type->name }} / {{ $creature->species->name }}</p>
+                                <div class="flex min-w-0 items-start gap-3">
+                                    <x-game-icon :icon="$creature->species?->icon ?? $creature->type?->icon" :label="$creature->name" />
+                                    <div class="min-w-0">
+                                        <h3 class="truncate text-lg font-semibold text-white">{{ $creature->name }}</h3>
+                                        <p class="mt-1 text-sm text-zinc-400">{{ $creature->type->name }} / {{ $creature->species->name }}</p>
+                                    </div>
                                 </div>
                                 <span class="rounded-md border border-emerald-500/40 px-3 py-1 text-sm text-emerald-200">
                                     Ур. {{ $creature->level }}
@@ -87,11 +90,14 @@
                     @foreach ($creatureTypes as $type)
                         <section class="rounded-md border border-zinc-800 bg-zinc-900">
                             <div class="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 px-5 py-4">
-                                <div>
-                                    <h3 class="text-xl font-semibold text-white">{{ $type->name }}</h3>
-                                    @if ($type->description)
-                                        <p class="mt-1 max-w-3xl text-sm text-zinc-400">{{ $type->description }}</p>
-                                    @endif
+                                <div class="flex min-w-0 items-start gap-3">
+                                    <x-game-icon :icon="$type->icon" :label="$type->name" />
+                                    <div class="min-w-0">
+                                        <h3 class="text-xl font-semibold text-white">{{ $type->name }}</h3>
+                                        @if ($type->description)
+                                            <p class="mt-1 max-w-3xl text-sm text-zinc-400">{{ $type->description }}</p>
+                                        @endif
+                                    </div>
                                 </div>
                                 <span class="rounded-md border border-emerald-500/40 px-3 py-1 text-sm text-emerald-200">
                                     {{ $type->species_count }} видов
@@ -106,21 +112,24 @@
                                 <div class="divide-y divide-zinc-800">
                                     @foreach ($type->species as $species)
                                         <article class="grid gap-4 px-5 py-4 lg:grid-cols-[1fr_auto] lg:items-center">
-                                            <div>
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <h4 class="font-semibold text-white">{{ $species->name }}</h4>
-                                                    <span class="rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300">
-                                                        {{ \App\Models\CreatureSpecies::RARITIES[$species->rarity] ?? $species->rarity }}
-                                                    </span>
-                                                    @if ($species->is_starter_available)
-                                                        <span class="rounded-md border border-emerald-500/40 px-2 py-0.5 text-xs text-emerald-200">
-                                                            Доступен при создании
+                                            <div class="flex min-w-0 items-start gap-3">
+                                                <x-game-icon :icon="$species->icon ?? $type->icon" :label="$species->name" size="sm" />
+                                                <div class="min-w-0">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <h4 class="font-semibold text-white">{{ $species->name }}</h4>
+                                                        <span class="rounded-md border border-zinc-700 px-2 py-0.5 text-xs text-zinc-300">
+                                                            {{ \App\Models\CreatureSpecies::RARITIES[$species->rarity] ?? $species->rarity }}
                                                         </span>
+                                                        @if ($species->is_starter_available)
+                                                            <span class="rounded-md border border-emerald-500/40 px-2 py-0.5 text-xs text-emerald-200">
+                                                                Доступен при создании
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    @if ($species->description)
+                                                        <p class="mt-1 text-sm text-zinc-400">{{ $species->description }}</p>
                                                     @endif
                                                 </div>
-                                                @if ($species->description)
-                                                    <p class="mt-1 text-sm text-zinc-400">{{ $species->description }}</p>
-                                                @endif
                                             </div>
 
                                             <dl class="grid grid-cols-7 gap-2 text-center text-xs">

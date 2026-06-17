@@ -118,11 +118,14 @@
 
                             <article class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <h3 class="text-lg font-semibold text-white">{{ $item->name }}</h3>
-                                        <div class="mt-2 flex flex-wrap items-center gap-2">
-                                            <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
-                                            @include('partials.rarity-badge', ['item' => $item])
+                                    <div class="flex min-w-0 items-start gap-3">
+                                        <x-game-icon :icon="$item->icon" :label="$item->name" />
+                                        <div class="min-w-0">
+                                            <h3 class="text-lg font-semibold text-white">{{ $item->name }}</h3>
+                                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
+                                                @include('partials.rarity-badge', ['item' => $item])
+                                            </div>
                                         </div>
                                     </div>
                                     <span class="rounded-md border border-emerald-500/40 px-3 py-1 text-sm text-emerald-100">

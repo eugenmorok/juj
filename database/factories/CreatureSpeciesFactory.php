@@ -24,6 +24,7 @@ class CreatureSpeciesFactory extends Factory
             'name' => ucfirst($name),
             'code' => Str::slug($name).'-'.fake()->unique()->numberBetween(100, 999),
             'description' => fake()->sentence(),
+            'icon' => null,
             'rarity' => 'common',
             'base_strength' => fake()->numberBetween(1, 10),
             'base_perception' => fake()->numberBetween(1, 10),

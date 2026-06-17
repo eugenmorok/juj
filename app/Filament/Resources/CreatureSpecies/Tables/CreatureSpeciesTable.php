@@ -23,6 +23,9 @@ class CreatureSpeciesTable
                     ->label('Название')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('icon')
+                    ->label('Иконка')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('type.name')
                     ->label('Тип')
                     ->searchable()

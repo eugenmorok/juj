@@ -7,6 +7,7 @@ use App\Jobs\ResolveInteractiveBattleRound;
 use App\Models\Battle;
 use App\Models\BattleAction;
 use App\Models\BattleEvent;
+use App\Models\BattleMessage;
 use App\Models\BattleParticipant;
 use App\Models\BattleRound;
 use App\Models\Creature;
@@ -24,7 +25,7 @@ use Throwable;
 
 class InteractiveBattleService
 {
-    public const ACTION_SECONDS = 6;
+    public const ACTION_SECONDS = 15;
 
     private const MAX_ROUNDS = 20;
 
@@ -220,11 +221,14 @@ class InteractiveBattleService
     {
         return $battle->load([
             'participants.creature.user',
+            'participants.creature.type',
+            'participants.creature.species',
             'rounds.firstActor',
             'rounds.actions.creature',
             'rounds.actions.inventoryItem.itemInstance.item',
             'events.actor',
             'events.target',
+            'messages.user',
         ]);
     }
 
@@ -276,6 +280,7 @@ class InteractiveBattleService
                 ? $this->availableConsumables($viewer, $ownParticipant->creature)
                 : collect(),
             'isInteractiveRunning' => $isInteractiveRunning,
+            'viewer' => $viewer,
         ];
     }
 
@@ -1037,7 +1042,14 @@ class InteractiveBattleService
             ->where('battle_id', $battle->id)
             ->latest('id')
             ->value('id');
+        $latestMessageId = BattleMessage::query()
+            ->where('battle_id', $battle->id)
+            ->latest('id')
+            ->value('id');
         $eventsCount = BattleEvent::query()
+            ->where('battle_id', $battle->id)
+            ->count();
+        $messagesCount = BattleMessage::query()
             ->where('battle_id', $battle->id)
             ->count();
 
@@ -1048,7 +1060,9 @@ class InteractiveBattleService
             'current_round' => $battle->current_round,
             'turn_deadline_at' => $battle->turn_deadline_at?->toISOString(),
             'latest_event_id' => $latestEventId ? (int) $latestEventId : null,
+            'latest_message_id' => $latestMessageId ? (int) $latestMessageId : null,
             'events_count' => $eventsCount,
+            'messages_count' => $messagesCount,
             'active_round' => $activeRound ? [
                 'id' => $activeRound->id,
                 'round_number' => $activeRound->round_number,
@@ -1091,6 +1105,7 @@ class InteractiveBattleService
             'action_panel_html' => view('game.battles.partials.action-panel', $viewData)->render(),
             'participants_html' => view('game.battles.partials.participants-grid', $viewData)->render(),
             'events_html' => view('game.battles.partials.events-log', $viewData)->render(),
+            'chat_html' => view('game.battles.partials.chat', $viewData)->render(),
         ];
     }
 
@@ -1122,6 +1137,7 @@ class InteractiveBattleService
             $state['status'] ?? '',
             $state['current_round'] ?? '',
             $state['latest_event_id'] ?? '',
+            $state['latest_message_id'] ?? '',
             $activeRound['actions_count'] ?? '',
             ($activeRound['own_action_submitted'] ?? false) ? 1 : 0,
         ]);

@@ -25,6 +25,7 @@ class ItemFactory extends Factory
             'name' => Str::title($name),
             'code' => Str::slug($name).'-'.fake()->unique()->numberBetween(100, 999),
             'description' => fake()->sentence(),
+            'icon' => null,
             'item_type' => 'equipment',
             'rarity' => 'common',
             'price' => fake()->numberBetween(20, 250),

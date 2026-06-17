@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\ArenaController;
 use App\Http\Controllers\ArenaChallengeController;
 use App\Http\Controllers\ArenaMatchmakingController;
+use App\Http\Controllers\BattleMessageController;
 use App\Http\Controllers\BattleReplayController;
 use App\Http\Controllers\BattleStateController;
 use App\Http\Controllers\CreatureController;
@@ -53,6 +54,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/arena/battles/{battle}/state', [BattleStateController::class, 'show'])->name('arena.battles.state');
     Route::get('/arena/battles/{battle}/replay', [BattleReplayController::class, 'show'])->name('arena.battles.replay');
     Route::post('/arena/battles/{battle}/actions', [InteractiveBattleActionController::class, 'store'])->name('arena.battles.actions.store');
+    Route::post('/arena/battles/{battle}/messages', [BattleMessageController::class, 'store'])->name('arena.battles.messages.store');
     Route::get('/shop', [ShopController::class, 'index'])->name('shop');
     Route::post('/shop/items/{item}', [ShopController::class, 'buyItem'])->name('shop.items.buy');
     Route::post('/shop/inventory-slots', [ShopController::class, 'buyInventorySlot'])->name('shop.inventory-slots.buy');

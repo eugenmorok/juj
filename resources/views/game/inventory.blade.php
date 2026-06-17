@@ -100,16 +100,19 @@
                             @endphp
                             <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <h3 class="font-semibold text-white">{{ $item->name }}</h3>
-                                        <div class="mt-2 flex flex-wrap items-center gap-2">
-                                            <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
-                                            <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
-                                            @include('partials.rarity-badge', ['item' => $item])
-                                            @if ($item->isConsumable())
-                                                <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
-                                            @endif
-                                            <span class="text-xs text-amber-300">Продажа: {{ $sellPrice }}</span>
+                                    <div class="flex min-w-0 items-start gap-3">
+                                        <x-game-icon :icon="$item->icon" :label="$item->name" size="sm" />
+                                        <div class="min-w-0">
+                                            <h3 class="font-semibold text-white">{{ $item->name }}</h3>
+                                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
+                                                <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
+                                                @include('partials.rarity-badge', ['item' => $item])
+                                                @if ($item->isConsumable())
+                                                    <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
+                                                @endif
+                                                <span class="text-xs text-amber-300">Продажа: {{ $sellPrice }}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -177,9 +180,12 @@
                             @endphp
                             <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <h3 class="text-lg font-semibold text-white">{{ $creature->name }}</h3>
-                                        <p class="mt-1 text-sm text-zinc-400">{{ $creature->type->name }} / {{ $creature->species->name }}</p>
+                                    <div class="flex min-w-0 items-start gap-3">
+                                        <x-game-icon :icon="$creature->species?->icon ?? $creature->type?->icon" :label="$creature->name" size="sm" />
+                                        <div class="min-w-0">
+                                            <h3 class="text-lg font-semibold text-white">{{ $creature->name }}</h3>
+                                            <p class="mt-1 text-sm text-zinc-400">{{ $creature->type->name }} / {{ $creature->species->name }}</p>
+                                        </div>
                                     </div>
                                     <span class="rounded-md border border-zinc-700 px-3 py-1 text-sm text-zinc-300">
                                         {{ $inventory->usedSlots() }}/{{ $inventory->capacity() }}
@@ -205,16 +211,19 @@
                                             @endphp
                                             <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
                                                 <div class="flex flex-wrap items-start justify-between gap-3">
-                                                    <div>
-                                                        <h4 class="font-semibold text-white">{{ $item->name }}</h4>
-                                                        <div class="mt-2 flex flex-wrap items-center gap-2">
-                                                            <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
-                                                            <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
-                                                            @include('partials.rarity-badge', ['item' => $item])
-                                                            @if ($item->isConsumable())
-                                                                <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
-                                                            @endif
-                                                            <span class="text-xs text-amber-300">Продажа: {{ $sellPrice }}</span>
+                                                    <div class="flex min-w-0 items-start gap-3">
+                                                        <x-game-icon :icon="$item->icon" :label="$item->name" size="sm" />
+                                                        <div class="min-w-0">
+                                                            <h4 class="font-semibold text-white">{{ $item->name }}</h4>
+                                                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                                <span class="text-xs text-zinc-500">Ячейка {{ $inventoryItem->slot_number }}</span>
+                                                                <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
+                                                                @include('partials.rarity-badge', ['item' => $item])
+                                                                @if ($item->isConsumable())
+                                                                    <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
+                                                                @endif
+                                                                <span class="text-xs text-amber-300">Продажа: {{ $sellPrice }}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     <div class="flex flex-wrap gap-2">

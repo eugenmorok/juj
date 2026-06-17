@@ -3,10 +3,12 @@
 @section('content')
     @php
         $latestEvent = $battle->events->last();
+        $latestMessage = $battle->messages->last();
         $battleMarker = implode('|', [
             $battle->status,
             $battle->current_round,
             $latestEvent?->id ?? '',
+            $latestMessage?->id ?? '',
             $activeRound?->actions?->count() ?? '',
             $ownAction ? 1 : 0,
         ]);
@@ -55,24 +57,33 @@
 
         <div class="hidden rounded-md border px-4 py-3 text-sm" data-battle-live-status></div>
 
-        <div data-battle-action-panel>
-            @include('game.battles.partials.action-panel', [
-                'battle' => $battle,
-                'activeRound' => $activeRound,
-                'ownParticipant' => $ownParticipant,
-                'ownAction' => $ownAction,
-                'zones' => $zones,
-                'availableConsumables' => $availableConsumables,
-                'isInteractiveRunning' => $isInteractiveRunning,
-            ])
-        </div>
-
         <div data-battle-participants>
             @include('game.battles.partials.participants-grid', ['battle' => $battle])
         </div>
 
-        <div data-battle-events>
-            @include('game.battles.partials.events-log', ['battle' => $battle])
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
+            <div data-battle-action-panel>
+                @include('game.battles.partials.action-panel', [
+                    'battle' => $battle,
+                    'activeRound' => $activeRound,
+                    'ownParticipant' => $ownParticipant,
+                    'ownAction' => $ownAction,
+                    'zones' => $zones,
+                    'availableConsumables' => $availableConsumables,
+                    'isInteractiveRunning' => $isInteractiveRunning,
+                ])
+            </div>
+
+            <div data-battle-events>
+                @include('game.battles.partials.events-log', ['battle' => $battle])
+            </div>
+        </div>
+
+        <div data-battle-chat>
+            @include('game.battles.partials.chat', [
+                'battle' => $battle,
+                'viewer' => $viewer ?? request()->user(),
+            ])
         </div>
     </div>
 @endsection

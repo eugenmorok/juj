@@ -48,7 +48,7 @@ class BattleLiveReplayGuardTest extends TestCase
         $battle = app(InteractiveBattleService::class)->start($challengerCreature, $defenderCreature, $challenger);
         $round = BattleRound::query()->where('battle_id', $battle->id)->where('round_number', 1)->firstOrFail();
 
-        $this->travel(7)->seconds();
+        $this->travel(16)->seconds();
 
         $this->actingAs($challenger)
             ->getJson(route('arena.battles.state', $battle))

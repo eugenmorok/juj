@@ -1,6 +1,6 @@
 @if ($isInteractiveRunning && $activeRound && $ownParticipant)
     <section class="rounded-md border border-emerald-500/30 bg-zinc-900 p-5">
-        <div class="grid gap-5 lg:grid-cols-[1fr_1.4fr]">
+        <div class="grid gap-5">
             <div>
                 <p class="text-sm font-medium uppercase text-emerald-300">Шаг {{ $activeRound->round_number }}</p>
                 <h2 class="mt-2 text-xl font-semibold text-white">Выбор тактики</h2>
@@ -73,6 +73,24 @@
                     </div>
 
                     <label class="mt-5 block text-sm font-semibold text-white" for="inventory_item_id">Расходник на шаг</label>
+                    @if ($availableConsumables->isNotEmpty())
+                        <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                            @foreach ($availableConsumables as $inventoryItem)
+                                @php
+                                    $item = $inventoryItem->itemInstance?->item;
+                                @endphp
+                                @if ($item)
+                                    <div class="flex items-center gap-3 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2">
+                                        <x-game-icon :icon="$item->icon" :label="$item->name" size="sm" />
+                                        <div class="min-w-0">
+                                            <div class="truncate text-sm font-medium text-white">{{ $item->name }}</div>
+                                            <div class="text-xs text-zinc-500">Зарядов: {{ $inventoryItem->itemInstance->remainingUses() }}</div>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
                     <select id="inventory_item_id" name="inventory_item_id" class="mt-2 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100">
                         <option value="">Не применять</option>
                         @foreach ($availableConsumables as $inventoryItem)

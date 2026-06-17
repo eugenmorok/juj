@@ -119,6 +119,10 @@ textarea {
 }
 
 [data-theme] .text-zinc-950 {
+    color: var(--arena-text) !important;
+}
+
+[data-theme] .bg-emerald-500.text-zinc-950 {
     color: var(--arena-accent-text) !important;
 }
 
@@ -130,6 +134,11 @@ textarea {
 [data-theme] .hover\:bg-zinc-900:hover {
     background-color: var(--arena-accent-strong) !important;
     color: var(--arena-accent-text) !important;
+}
+
+[data-theme] .hover\:bg-zinc-950:hover {
+    background-color: var(--arena-panel-strong) !important;
+    color: var(--arena-text) !important;
 }
 
 [data-theme] .hover\:text-white:hover,
@@ -153,6 +162,12 @@ textarea {
 }
 
 [data-theme] .text-emerald-100 {
+    color: var(--arena-text) !important;
+}
+
+[data-theme='light'] .text-sky-100,
+[data-theme='light'] .text-violet-100,
+[data-theme='light'] .text-rose-100 {
     color: var(--arena-text) !important;
 }
 

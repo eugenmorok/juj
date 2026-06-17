@@ -79,6 +79,14 @@ class Battle extends Model
     }
 
     /**
+     * @return HasMany<BattleMessage, $this>
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(BattleMessage::class)->oldest();
+    }
+
+    /**
      * @return HasMany<BattleRound, $this>
      */
     public function rounds(): HasMany

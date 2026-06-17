@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'name',
     'code',
     'description',
+    'icon',
     'item_type',
     'rarity',
     'price',

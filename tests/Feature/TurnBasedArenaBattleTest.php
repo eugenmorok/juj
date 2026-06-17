@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\ArenaChallenge;
 use App\Models\Battle;
 use App\Models\BattleAction;
+use App\Models\BattleMessage;
 use App\Models\BattleParticipant;
 use App\Models\BattleRound;
 use App\Models\BotProfile;
@@ -78,6 +79,7 @@ class TurnBasedArenaBattleTest extends TestCase
         $eventText = $battle->events()->where('event_type', 'interactive_battle_started')->value('text_log');
 
         $this->assertStringContainsString('Бой начинается', $eventText);
+        $this->assertStringContainsString('Первый темп', $eventText);
         $this->assertStringNotContainsString('Рџ', $eventText);
 
         $this->actingAs($user)
@@ -89,6 +91,7 @@ class TurnBasedArenaBattleTest extends TestCase
             ->assertSee('Голова')
             ->assertSee('Тело')
             ->assertSee('Лог боя')
+            ->assertSee('Чат боя')
             ->assertDontSee('Рџ', false)
             ->assertDontSee('Р ', false)
             ->assertDontSee('РЎ', false);
@@ -142,6 +145,46 @@ class TurnBasedArenaBattleTest extends TestCase
         $this->assertSame(2, $battle->refresh()->current_round);
     }
 
+    public function test_players_can_exchange_battle_messages(): void
+    {
+        [$type, $species] = $this->catalog();
+        $challenger = User::factory()->create();
+        $defender = User::factory()->create();
+        $challengerCreature = $this->creatureFor($challenger, $type, $species, ['name' => 'Caller']);
+        $defenderCreature = $this->creatureFor($defender, $type, $species, ['name' => 'Receiver']);
+
+        $this->actingAs($challenger)
+            ->post(route('arena.challenges.store'), [
+                'challenger_creature_id' => $challengerCreature->id,
+                'defender_creature_id' => $defenderCreature->id,
+            ])
+            ->assertRedirect();
+
+        $challenge = ArenaChallenge::query()->firstOrFail();
+
+        $this->actingAs($defender)
+            ->post(route('arena.challenges.accept', $challenge))
+            ->assertRedirect();
+
+        $battle = $challenge->refresh()->battle;
+
+        $response = $this->actingAs($challenger)
+            ->postJson(route('arena.battles.messages.store', $battle), [
+                'message' => 'Готов к бою.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('message', 'Сообщение отправлено.');
+
+        $this->assertSame(1, BattleMessage::query()->where('battle_id', $battle->id)->count());
+        $this->assertStringContainsString('Готов к бою.', $response->json('fragments.chat_html'));
+        $this->assertNotNull($response->json('latest_message_id'));
+
+        $this->actingAs($defender)
+            ->get(route('arena.battles.show', $battle))
+            ->assertOk()
+            ->assertSee('Готов к бою.');
+    }
+
     public function test_missing_player_actions_are_auto_submitted_after_deadline(): void
     {
         [$type, $species] = $this->catalog();
@@ -164,7 +207,7 @@ class TurnBasedArenaBattleTest extends TestCase
         $battle = $challenge->refresh()->battle;
         $round = BattleRound::query()->where('battle_id', $battle->id)->where('round_number', 1)->firstOrFail();
 
-        $this->travel(7)->seconds();
+        $this->travel(16)->seconds();
 
         app(InteractiveBattleService::class)->processBattle($battle);
 

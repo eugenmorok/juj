@@ -23,6 +23,9 @@ class ItemsTable
                     ->label('Название')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('icon')
+                    ->label('Иконка')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('item_type')
                     ->label('Тип')
                     ->formatStateUsing(fn (string $state): string => Item::TYPES[$state] ?? $state)

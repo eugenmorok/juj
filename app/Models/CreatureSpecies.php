@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'name',
     'code',
     'description',
+    'icon',
     'rarity',
     'base_strength',
     'base_perception',

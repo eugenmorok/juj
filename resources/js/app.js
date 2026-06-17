@@ -26,6 +26,7 @@ const battleMarker = (state) => [
     state.status,
     state.current_round,
     state.latest_event_id ?? '',
+    state.latest_message_id ?? '',
     state.active_round?.actions_count ?? '',
     state.active_round?.own_action_submitted ? 1 : 0,
 ].join('|');
@@ -93,9 +94,10 @@ const setupBattleRealtime = () => {
     const actionPanel = container.querySelector('[data-battle-action-panel]');
     const participantsPanel = container.querySelector('[data-battle-participants]');
     const eventsPanel = container.querySelector('[data-battle-events]');
+    const chatPanel = container.querySelector('[data-battle-chat]');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-    if (!stateUrl || !actionPanel || !participantsPanel || !eventsPanel) {
+    if (!stateUrl || !actionPanel || !participantsPanel || !eventsPanel || !chatPanel) {
         return;
     }
 
@@ -103,6 +105,7 @@ const setupBattleRealtime = () => {
     let deadline = container.dataset.battleDeadline || '';
     let requestInFlight = false;
     let submitInFlight = false;
+    let chatInFlight = false;
     let channel = null;
     let pollTimer = null;
     let countdownTimer = null;
@@ -147,6 +150,7 @@ const setupBattleRealtime = () => {
             actionPanel.innerHTML = state.fragments.action_panel_html ?? '';
             participantsPanel.innerHTML = state.fragments.participants_html ?? '';
             eventsPanel.innerHTML = state.fragments.events_html ?? '';
+            chatPanel.innerHTML = state.fragments.chat_html ?? '';
         }
 
         updateCountdown();
@@ -236,6 +240,79 @@ const setupBattleRealtime = () => {
     };
 
     container.addEventListener('submit', async (event) => {
+        const chatForm = event.target.closest('[data-battle-chat-form]');
+
+        if (chatForm) {
+            event.preventDefault();
+
+            if (chatInFlight) {
+                return;
+            }
+
+            chatInFlight = true;
+
+            const submitButton = chatForm.querySelector('button[type="submit"]');
+            const input = chatForm.querySelector('[data-battle-chat-input]');
+            const errorBox = chatPanel.querySelector('[data-battle-chat-error]');
+
+            if (errorBox) {
+                errorBox.classList.add('hidden');
+                errorBox.textContent = '';
+            }
+
+            if (submitButton) {
+                submitButton.disabled = true;
+            }
+
+            try {
+                const response = await fetch(chatForm.action, {
+                    method: 'POST',
+                    body: new FormData(chatForm),
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const payload = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    if (errorBox) {
+                        errorBox.textContent = firstError(payload);
+                        errorBox.classList.remove('hidden');
+                    } else {
+                        setStatus(firstError(payload), 'error');
+                    }
+
+                    return;
+                }
+
+                applyState(payload, true);
+
+                const freshInput = chatPanel.querySelector('[data-battle-chat-input]') || input;
+                if (freshInput) {
+                    freshInput.value = '';
+                    freshInput.focus();
+                }
+            } catch {
+                if (errorBox) {
+                    errorBox.textContent = 'Не удалось отправить сообщение. Попробуйте еще раз.';
+                    errorBox.classList.remove('hidden');
+                } else {
+                    setStatus('Не удалось отправить сообщение. Попробуйте еще раз.', 'error');
+                }
+            } finally {
+                chatInFlight = false;
+
+                if (submitButton) {
+                    submitButton.disabled = false;
+                }
+            }
+
+            return;
+        }
+
         const form = event.target.closest('[data-battle-action-form]');
 
         if (!form) {

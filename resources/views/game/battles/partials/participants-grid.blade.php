@@ -19,11 +19,21 @@
         @endphp
         <article class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
             <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h2 class="text-xl font-semibold text-white">{{ $participant->creature->name }}</h2>
-                    <p class="mt-1 text-sm text-zinc-400">
-                        {{ $participant->creature->user->name }} / ур. {{ $participant->level_before }} -> {{ $participant->level_after }}
-                    </p>
+                <div class="flex min-w-0 items-start gap-3">
+                    <x-game-icon
+                        :icon="$participant->creature->species?->icon ?? $participant->creature->type?->icon"
+                        :label="$participant->creature->name"
+                        size="lg"
+                    />
+                    <div class="min-w-0">
+                        <h2 class="truncate text-xl font-semibold text-white">{{ $participant->creature->name }}</h2>
+                        <p class="mt-1 text-sm text-zinc-400">
+                            {{ $participant->creature->user->name }} / ур. {{ $participant->level_before }} -> {{ $participant->level_after }}
+                        </p>
+                        <p class="mt-1 text-xs text-zinc-500">
+                            {{ $participant->creature->type?->name }} / {{ $participant->creature->species?->name }}
+                        </p>
+                    </div>
                 </div>
                 <span class="rounded-md border px-3 py-1 text-sm {{ $resultTone }}">
                     {{ $resultLabel }}

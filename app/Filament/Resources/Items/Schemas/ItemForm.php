@@ -32,6 +32,10 @@ class ItemForm
                             ->alphaDash()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
+                        TextInput::make('icon')
+                            ->label('Иконка')
+                            ->helperText('URL, путь из public или короткий текстовый знак.')
+                            ->maxLength(255),
                         Select::make('item_type')
                             ->label('Тип предмета')
                             ->options(Item::TYPES)
