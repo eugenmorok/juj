@@ -27,14 +27,14 @@ class PlayerProgressTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame(150, $user->xp);
+        $this->assertSame(240, $user->xp);
         $this->assertSame(30, $user->creature_creation_points);
     }
 
     public function test_player_cannot_convert_more_xp_than_available(): void
     {
         $user = User::factory()->create([
-            'xp' => 50,
+            'xp' => 5,
             'creature_creation_points' => 0,
         ]);
 
@@ -48,7 +48,7 @@ class PlayerProgressTest extends TestCase
 
         $user->refresh();
 
-        $this->assertSame(50, $user->xp);
+        $this->assertSame(5, $user->xp);
         $this->assertSame(0, $user->creature_creation_points);
     }
 }

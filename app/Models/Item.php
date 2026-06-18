@@ -31,6 +31,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'uses_count',
     'is_unique',
     'is_active',
+    'is_generated',
+    'generated_at',
 ])]
 class Item extends Model
 {
@@ -157,6 +159,8 @@ class Item extends Model
             'uses_count' => 'integer',
             'is_unique' => 'boolean',
             'is_active' => 'boolean',
+            'is_generated' => 'boolean',
+            'generated_at' => 'datetime',
         ];
     }
 }

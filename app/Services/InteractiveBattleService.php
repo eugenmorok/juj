@@ -32,6 +32,10 @@ class InteractiveBattleService
 
     private const STATE_CACHE_TTL_SECONDS = 43200;
 
+    private const BOT_DAMAGE_MULTIPLIER = 0.88;
+
+    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.08;
+
     public function __construct(
         private readonly PowerScoreService $powerScore,
         private readonly BattleRewardService $battleRewards,
@@ -46,6 +50,7 @@ class InteractiveBattleService
         $battle = DB::transaction(function () use ($challengerCreature, $defenderCreature, $initiator, $seed, $arena): Battle {
             $challengerCreature = $this->freshCreature($challengerCreature);
             $defenderCreature = $this->freshCreature($defenderCreature);
+            $firstActorCreatureId = $this->initialFirstActorCreatureId($challengerCreature, $defenderCreature);
 
             $battle = Battle::query()->create([
                 'initiator_user_id' => $initiator?->id,
@@ -68,12 +73,12 @@ class InteractiveBattleService
             $this->event($battle, 0, 'interactive_battle_started', null, null, [
                 'seed' => $seed,
                 'action_seconds' => self::ACTION_SECONDS,
-                'first_actor_creature_id' => $defenderCreature->id,
+                'first_actor_creature_id' => $firstActorCreatureId,
                 'arena_name' => $battle->arena_name,
                 'arena_effects' => $battle->arena_effects,
-            ], "Бой начинается на арене «{$battle->arena_name}»: {$challengerCreature->name} против {$defenderCreature->name}. Первый темп у {$defenderCreature->name}.");
+            ], "Бой начинается на арене «{$battle->arena_name}»: {$challengerCreature->name} против {$defenderCreature->name}. Первый темп у ".($firstActorCreatureId === $challengerCreature->id ? $challengerCreature->name : $defenderCreature->name).'.');
 
-            $round = $this->createRound($battle, 1, $defenderCreature->id);
+            $round = $this->createRound($battle, 1, $firstActorCreatureId);
             $this->createBotActions($battle, $round);
 
             if ($this->roundHasAllActions($battle, $round)) {
@@ -583,6 +588,8 @@ class InteractiveBattleService
             $damage = (int) ceil($damage * 1.45);
         }
 
+        [$damage, $pveBalanceMultiplier] = $this->applyPveDamageBalance($attacker, $target, $damage);
+
         [$damage, $mitigated, $mitigationChance, $mitigationRoll] = $this->applyComposureMitigation(
             $battle,
             $round,
@@ -611,6 +618,7 @@ class InteractiveBattleService
             'hit_roll' => $hitRoll,
             'crit_chance' => $critChance,
             'crit_roll' => $critRoll,
+            'pve_balance_multiplier' => $pveBalanceMultiplier,
             'target_hp' => max(0, $target->hp_after),
         ], "{$attacker->creature->name} попадает в {$this->zoneLabel($action->attack_zone)}: {$damage} урона. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
     }
@@ -945,6 +953,32 @@ class InteractiveBattleService
         };
 
         return max(1, (int) round(($base * $zoneMultiplier) - $defense));
+    }
+
+    /**
+     * @return array{0: int, 1: float}
+     */
+    private function applyPveDamageBalance(BattleParticipant $attacker, BattleParticipant $target, int $damage): array
+    {
+        $multiplier = match (true) {
+            $attacker->is_bot && ! $target->is_bot => self::BOT_DAMAGE_MULTIPLIER,
+            ! $attacker->is_bot && $target->is_bot => self::PLAYER_VS_BOT_DAMAGE_MULTIPLIER,
+            default => 1.0,
+        };
+
+        return [
+            max(1, (int) round($damage * $multiplier)),
+            $multiplier,
+        ];
+    }
+
+    private function initialFirstActorCreatureId(Creature $challenger, Creature $defender): int
+    {
+        if ((bool) $challenger->user?->is_bot !== (bool) $defender->user?->is_bot) {
+            return $challenger->user?->is_bot ? $defender->id : $challenger->id;
+        }
+
+        return $defender->id;
     }
 
     private function zoneHitModifier(string $zone): int

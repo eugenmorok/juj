@@ -13,6 +13,10 @@ class BattleEngine
 {
     private const MAX_ROUNDS = 20;
 
+    private const BOT_DAMAGE_MULTIPLIER = 0.88;
+
+    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.08;
+
     private int $rngState = 1;
 
     public function __construct(
@@ -252,6 +256,7 @@ class BattleEngine
             $damage += 3;
         }
 
+        [$damage, $pveBalanceMultiplier] = $this->applyPveDamageBalance($attacker, $defender, $damage);
         [$damage, $mitigated] = $this->applyComposureMitigation($damage, $defender);
 
         $defender['hp'] = max(0, $defender['hp'] - $damage);
@@ -265,8 +270,27 @@ class BattleEngine
             'hit_roll' => $hitRoll,
             'crit_chance' => $critChance,
             'crit_roll' => $critRoll,
+            'pve_balance_multiplier' => $pveBalanceMultiplier,
             'target_hp' => $defender['hp'],
         ], "{$attackerCreature->name} наносит {$damage} урона. {$defenderCreature->name}: {$defender['hp']} HP.{$suffix}");
+    }
+
+    /**
+     * @param  array<string, mixed>  $attacker
+     * @param  array<string, mixed>  $defender
+     * @return array{0: int, 1: float}
+     */
+    private function applyPveDamageBalance(array $attacker, array $defender, int $damage): array
+    {
+        $attackerIsBot = (bool) $attacker['creature']->user?->is_bot;
+        $defenderIsBot = (bool) $defender['creature']->user?->is_bot;
+        $multiplier = match (true) {
+            $attackerIsBot && ! $defenderIsBot => self::BOT_DAMAGE_MULTIPLIER,
+            ! $attackerIsBot && $defenderIsBot => self::PLAYER_VS_BOT_DAMAGE_MULTIPLIER,
+            default => 1.0,
+        };
+
+        return [max(1, (int) round($damage * $multiplier)), $multiplier];
     }
 
     /**

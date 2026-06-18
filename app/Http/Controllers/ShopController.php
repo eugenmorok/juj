@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Creature;
+use App\Models\CreatureSpecies;
+use App\Models\CreatureType;
 use App\Models\Item;
+use App\Services\ShopItemGenerationService;
 use App\Services\ShopService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -12,8 +15,10 @@ use Illuminate\Validation\Rule;
 
 class ShopController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, ShopItemGenerationService $itemGeneration): View
     {
+        $itemGeneration->generateIfDue();
+
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:80'],
             'item_type' => ['nullable', 'string', Rule::in(array_keys(Item::TYPES))],
@@ -43,9 +48,8 @@ class ShopController extends Controller
             ->when($filters['level'] ?? null, fn ($query, int $level) => $query->where('required_level', '<=', $level))
             ->when(($filters['available'] ?? null) === '1', fn ($query) => $query
                 ->where('required_level', '<=', $user->level))
-            ->orderBy('price')
-            ->orderBy('required_level')
-            ->orderBy('name')
+            ->inRandomOrder()
+            ->limit(16)
             ->get();
 
         if (($filters['available'] ?? null) === '1') {
@@ -54,12 +58,32 @@ class ShopController extends Controller
                 ->values();
         }
 
+        $typeNames = CreatureType::query()
+            ->whereIn('id', $items->flatMap(fn (Item $item): array => $item->allowed_types ?? [])->unique())
+            ->pluck('name', 'id');
+        $speciesNames = CreatureSpecies::query()
+            ->whereIn('id', $items->flatMap(fn (Item $item): array => $item->allowed_species ?? [])->unique())
+            ->pluck('name', 'id');
+        $itemApplicability = $items->mapWithKeys(function (Item $item) use ($typeNames, $speciesNames): array {
+            $types = collect($item->allowed_types ?? [])->map(fn (mixed $id): mixed => $typeNames[(int) $id] ?? null)->filter();
+            $species = collect($item->allowed_species ?? [])->map(fn (mixed $id): mixed => $speciesNames[(int) $id] ?? null)->filter();
+
+            $label = $types->isEmpty() ? 'Все типы сущностей' : 'Типы: '.$types->join(', ');
+
+            if ($species->isNotEmpty()) {
+                $label .= '; виды: '.$species->join(', ');
+            }
+
+            return [$item->id => $label];
+        });
+
         return view('game.shop', [
             'user' => $user,
             'items' => $items,
             'playerInventory' => $playerInventory,
             'ownedUniqueItemIds' => $ownedUniqueItemIds,
             'filters' => $filters,
+            'itemApplicability' => $itemApplicability,
             'inventorySlotCost' => ShopService::inventorySlotCost($user),
             'servicePrices' => ShopService::SERVICE_PRICES,
             'creatures' => $user->creatures()

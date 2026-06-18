@@ -6,6 +6,7 @@ use App\Models\ArenaSetting;
 use App\Models\Battle;
 use App\Models\Creature;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class ArenaService
@@ -76,14 +77,21 @@ class ArenaService
             $matchCandidates = $candidates;
         }
 
-        if ($settings->matchmaking_power_score_difference > 0) {
-            $powerCandidates = $matchCandidates
-                ->filter(fn (Creature $candidate): bool => abs($this->powerScore->calculate($candidate) - $creaturePower) <= $settings->matchmaking_power_score_difference)
-                ->values();
+        $powerDifference = $settings->matchmaking_power_score_difference > 0
+            ? $settings->matchmaking_power_score_difference
+            : max(25, (int) ceil($creaturePower * 0.25));
+        $botPowerCeiling = max($creaturePower + 10, (int) ceil($creaturePower * 1.05));
+        $powerCandidates = $matchCandidates
+            ->filter(function (Creature $candidate) use ($creaturePower, $powerDifference, $botPowerCeiling): bool {
+                $candidatePower = $this->powerScore->calculate($candidate);
 
-            if ($powerCandidates->isNotEmpty()) {
-                $matchCandidates = $powerCandidates;
-            }
+                return abs($candidatePower - $creaturePower) <= $powerDifference
+                    && (! $candidate->user?->is_bot || $candidatePower <= $botPowerCeiling);
+            })
+            ->values();
+
+        if ($powerCandidates->isNotEmpty()) {
+            $matchCandidates = $powerCandidates;
         }
 
         return $matchCandidates
@@ -92,8 +100,8 @@ class ArenaService
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Creature>  $realCandidates
-     * @param  \Illuminate\Support\Collection<int, Creature>  $botCandidates
+     * @param  Collection<int, Creature>  $realCandidates
+     * @param  Collection<int, Creature>  $botCandidates
      */
     private function shouldUseBot($realCandidates, $botCandidates): bool
     {

@@ -45,7 +45,7 @@ class BotGenerationService
                         'is_active' => true,
                         'min_level' => $minLevel,
                         'max_level' => $maxLevel,
-                        'spawn_chance' => 100,
+                        'spawn_chance' => 65,
                     ]);
 
                     if ($withCreature) {

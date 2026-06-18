@@ -9,8 +9,8 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -34,7 +34,7 @@ class User extends Authenticatable implements FilamentUser
 
     public const CREATURE_CREATION_COST = 100;
 
-    public const CREATURE_CREATION_POINT_XP_COST = 10;
+    public const CREATURE_CREATION_POINT_XP_COST = 1;
 
     public const MAX_SHOP_DISCOUNT_PERCENT = 20;
 

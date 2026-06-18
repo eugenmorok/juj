@@ -97,6 +97,39 @@ class BattleEngineTest extends TestCase
         $this->assertGreaterThan($baseScore + 25, $powerScore->calculate($creature->refresh()));
     }
 
+    public function test_automatic_pve_battle_applies_player_and_bot_damage_multipliers(): void
+    {
+        $player = User::factory()->create();
+        $bot = User::factory()->create(['is_bot' => true]);
+        $playerCreature = $this->creatureFor($player, [
+            'name' => 'Player',
+            'strength' => 24,
+            'perception' => 24,
+            'agility' => 24,
+        ]);
+        $botCreature = $this->creatureFor($bot, [
+            'name' => 'Bot',
+            'strength' => 24,
+            'perception' => 24,
+            'agility' => 24,
+        ]);
+
+        $battle = app(BattleEngine::class)->run($playerCreature, $botCreature, seed: 12345);
+        $multipliers = $battle->events()
+            ->whereIn('event_type', ['hit', 'critical_hit'])
+            ->get()
+            ->pluck('payload')
+            ->pluck('pve_balance_multiplier')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertContains(0.88, $multipliers);
+        $this->assertContains(1.08, $multipliers);
+    }
+
     /**
      * @param  array<string, mixed>  $attributes
      */

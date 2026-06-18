@@ -21,7 +21,7 @@ class StarterBotSeeder extends Seeder
             'style' => 'aggressive',
             'min_level' => 1,
             'max_level' => 2,
-            'spawn_chance' => 100,
+            'spawn_chance' => 65,
         ],
         [
             'email' => 'bot-guardian@bots.rpg-arena.test',
@@ -29,7 +29,7 @@ class StarterBotSeeder extends Seeder
             'style' => 'defensive',
             'min_level' => 1,
             'max_level' => 2,
-            'spawn_chance' => 90,
+            'spawn_chance' => 60,
         ],
         [
             'email' => 'bot-balanced@bots.rpg-arena.test',
@@ -37,7 +37,7 @@ class StarterBotSeeder extends Seeder
             'style' => 'balanced',
             'min_level' => 1,
             'max_level' => 3,
-            'spawn_chance' => 80,
+            'spawn_chance' => 55,
         ],
         [
             'email' => 'bot-scout@bots.rpg-arena.test',
@@ -45,7 +45,7 @@ class StarterBotSeeder extends Seeder
             'style' => 'economical',
             'min_level' => 1,
             'max_level' => 2,
-            'spawn_chance' => 70,
+            'spawn_chance' => 50,
         ],
         [
             'email' => 'bot-chaos@bots.rpg-arena.test',
@@ -53,7 +53,7 @@ class StarterBotSeeder extends Seeder
             'style' => 'random',
             'min_level' => 1,
             'max_level' => 3,
-            'spawn_chance' => 60,
+            'spawn_chance' => 45,
         ],
     ];
 

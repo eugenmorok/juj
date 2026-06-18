@@ -153,6 +153,10 @@
                                         <dt class="text-xs text-zinc-500">Длительность</dt>
                                         <dd class="mt-1 text-zinc-200">{{ \App\Models\Item::DURATIONS[$item->duration_type] ?? $item->duration_type }}</dd>
                                     </div>
+                                    <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 sm:col-span-2">
+                                        <dt class="text-xs text-zinc-500">Для каких сущностей</dt>
+                                        <dd class="mt-1 text-zinc-200">{{ $itemApplicability[$item->id] ?? 'Все типы сущностей' }}</dd>
+                                    </div>
                                 </dl>
 
                                 @if ($item->bonuses)

@@ -208,7 +208,7 @@ class ArenaMatchmakingService
     }
 
     /**
-     * @param  array{power_delta: int, level_delta: int}  $candidate
+     * @param  array{is_bot: bool, power_score: int, power_delta: int, level_delta: int}  $candidate
      */
     private function isSuitableCandidate(ArenaMatchmakingSession $session, array $candidate, ArenaSetting $settings): bool
     {
@@ -216,8 +216,10 @@ class ArenaMatchmakingService
         $powerDiff = $settings->matchmaking_power_score_difference > 0
             ? $settings->matchmaking_power_score_difference
             : max(25, (int) ceil($session->power_score * 0.25));
+        $botPowerCeiling = max($session->power_score + 10, (int) ceil($session->power_score * 1.05));
 
         return $candidate['level_delta'] <= $levelDiff
-            && $candidate['power_delta'] <= $powerDiff;
+            && $candidate['power_delta'] <= $powerDiff
+            && (! $candidate['is_bot'] || $candidate['power_score'] <= $botPowerCeiling);
     }
 }
