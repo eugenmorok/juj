@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Battle;
 use App\Models\BattleEvent;
 use App\Models\Creature;
 use App\Models\CreatureSpecies;
@@ -62,6 +63,41 @@ class BattleMediaPresentationTest extends TestCase
             ->assertJsonPath('participants.0.image_url', url('game-assets/creatures/animal-wolf.webp'));
     }
 
+    public function test_battle_log_colors_damage_and_blocks_from_viewer_perspective(): void
+    {
+        [$user, $battle] = $this->battle();
+        $participants = $battle->participants()->orderBy('id')->get();
+
+        BattleEvent::query()->create([
+            'battle_id' => $battle->id,
+            'round' => 2,
+            'event_type' => 'interactive_hit',
+            'actor_creature_id' => $participants[0]->creature_id,
+            'target_creature_id' => $participants[1]->creature_id,
+            'payload' => ['damage' => 19, 'attack_zone' => 'head', 'defense_zone' => 'body'],
+            'text_log' => 'Игрок наносит урон.',
+        ]);
+        BattleEvent::query()->create([
+            'battle_id' => $battle->id,
+            'round' => 2,
+            'event_type' => 'interactive_hit',
+            'actor_creature_id' => $participants[1]->creature_id,
+            'target_creature_id' => $participants[0]->creature_id,
+            'payload' => ['damage' => 7, 'attack_zone' => 'body', 'defense_zone' => 'body'],
+            'text_log' => 'Защита игрока сработала.',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('arena.battles.show', $battle))
+            ->assertOk()
+            ->assertSee('battle-event-damage--positive', false)
+            ->assertSee('battle-event-damage--negative', false)
+            ->assertSee('battle-event-row--positive', false)
+            ->assertSee('19 HP')
+            ->assertSee('7 HP')
+            ->assertSee('Блок');
+    }
+
     public function test_media_url_supports_bundled_and_uploaded_assets(): void
     {
         $this->assertSame(
@@ -75,7 +111,7 @@ class BattleMediaPresentationTest extends TestCase
     }
 
     /**
-     * @return array{0: User, 1: \App\Models\Battle}
+     * @return array{0: User, 1: Battle}
      */
     private function battle(): array
     {

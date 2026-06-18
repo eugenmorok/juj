@@ -79,7 +79,10 @@
             </div>
 
             <div class="battle-workspace__log" data-battle-events>
-                @include('game.battles.partials.events-log', ['battle' => $battle])
+                @include('game.battles.partials.events-log', [
+                    'battle' => $battle,
+                    'ownParticipant' => $ownParticipant,
+                ])
             </div>
         </div>
 

@@ -13,58 +13,97 @@
         'interactive_hit' => 'Удар',
         'interactive_critical_hit' => 'Крит',
         'interactive_miss' => 'Промах',
-        'interactive_item_used' => 'Предмет',
+        'interactive_item_used' => 'Эффект',
         'interactive_item_failed' => 'Сбой',
         'interactive_battle_finished' => 'Итог',
     ][$event->event_type] ?? $event->event_type;
-    $eventTone = match ($event->event_type) {
-        'critical_hit', 'interactive_critical_hit' => 'border-amber-400/60 text-amber-100',
-        'miss', 'interactive_miss' => 'border-zinc-700 text-zinc-300',
-        'self_repair', 'interactive_item_used' => 'border-sky-400/60 text-sky-100',
-        'battle_finished', 'interactive_battle_finished', 'rewards_applied' => 'border-emerald-500/50 text-emerald-100',
-        'interactive_item_failed' => 'border-rose-500/50 text-rose-100',
-        default => 'border-zinc-700 text-zinc-200',
-    };
     $payload = $event->payload ?? [];
+    $ownCreatureId = isset($ownCreatureId) ? (int) $ownCreatureId : null;
+    $actorIsOwn = $ownCreatureId && (int) $event->actor_creature_id === $ownCreatureId;
+    $targetIsOwn = $ownCreatureId && (int) $event->target_creature_id === $ownCreatureId;
+    $isHit = in_array($event->event_type, ['hit', 'critical_hit', 'interactive_hit', 'interactive_critical_hit'], true);
+    $isPositive = in_array($event->event_type, ['self_repair', 'interactive_item_used'], true);
+    $isBlocked = isset($payload['attack_zone'], $payload['defense_zone'])
+        && $payload['attack_zone'] === $payload['defense_zone'];
+    $damagePerspective = match (true) {
+        $actorIsOwn => 'positive',
+        $targetIsOwn => 'negative',
+        default => 'neutral',
+    };
+
+    $perspective = match (true) {
+        $isBlocked && $targetIsOwn => 'positive',
+        $isBlocked && $actorIsOwn => 'negative',
+        $isHit && $actorIsOwn => 'positive',
+        $isHit && $targetIsOwn => 'negative',
+        $isPositive && $actorIsOwn => 'positive',
+        $isPositive && ! $actorIsOwn && $ownCreatureId => 'negative',
+        default => 'neutral',
+    };
+    $rowTone = match ($perspective) {
+        'positive' => 'battle-event-row--positive',
+        'negative' => 'battle-event-row--negative',
+        default => '',
+    };
+    $eventTone = match (true) {
+        $perspective === 'positive' => 'battle-event-badge--positive',
+        $perspective === 'negative' => 'battle-event-badge--negative',
+        in_array($event->event_type, ['critical_hit', 'interactive_critical_hit'], true) => 'battle-event-badge--critical',
+        default => '',
+    };
+    $zoneLabels = [
+        'head' => 'голова',
+        'body' => 'тело',
+        'arms' => 'руки',
+        'legs' => 'ноги',
+    ];
 @endphp
 
-<article class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-3 text-sm">
-    <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="rounded-md border px-2 py-0.5 text-xs font-medium {{ $eventTone }}">
-                    R{{ $event->round }} / {{ $eventLabel }}
+<article class="battle-event-row {{ $rowTone }}">
+    <div class="battle-event-row__heading">
+        <div class="battle-event-row__meta">
+            <span class="battle-event-badge {{ $eventTone }}">R{{ $event->round }} · {{ $eventLabel }}</span>
+            @if ($event->actor)
+                <span class="battle-event-row__actors">
+                    {{ $event->actor->name }}@if ($event->target)<b>→</b>{{ $event->target->name }}@endif
                 </span>
-                @if ($event->actor)
-                    <span class="text-xs text-zinc-400">{{ $event->actor->name }}</span>
-                @endif
-                @if ($event->target)
-                    <span class="text-xs text-zinc-500">-> {{ $event->target->name }}</span>
-                @endif
-            </div>
-            <p class="mt-2 text-zinc-300">{{ $event->text_log }}</p>
+            @endif
         </div>
 
-        @if ($payload !== [])
-            <dl class="grid min-w-44 grid-cols-2 gap-2 text-xs">
-                @foreach ([
-                    'damage' => 'Урон',
-                    'heal' => 'Лечение',
-                    'hit_chance' => 'Шанс',
-                    'hit_roll' => 'Бросок',
-                    'roll' => 'Бросок',
-                    'target_hp' => 'HP цели',
-                    'attack_zone' => 'Зона',
-                    'defense_zone' => 'Блок',
-                ] as $key => $label)
-                    @if (array_key_exists($key, $payload))
-                        <div class="rounded-md border border-zinc-800 px-2 py-1">
-                            <dt class="text-zinc-500">{{ $label }}</dt>
-                            <dd class="font-semibold text-zinc-100">{{ $payload[$key] }}</dd>
-                        </div>
-                    @endif
-                @endforeach
-            </dl>
-        @endif
+        <div class="battle-event-row__signals">
+            @if ($isHit && array_key_exists('damage', $payload))
+                <strong class="battle-event-damage battle-event-damage--{{ $damagePerspective }}">
+                    −{{ $payload['damage'] }} HP
+                </strong>
+            @endif
+            @if ($isPositive && array_key_exists('heal', $payload) && (int) $payload['heal'] > 0)
+                <strong class="battle-event-effect battle-event-effect--{{ $perspective }}">
+                    +{{ $payload['heal'] }} HP
+                </strong>
+            @endif
+            @if ($isBlocked)
+                <strong class="battle-event-effect battle-event-effect--{{ $perspective }}">Блок</strong>
+            @endif
+        </div>
     </div>
+
+    <p class="battle-event-row__text">{{ $event->text_log }}</p>
+
+    @if (array_key_exists('attack_zone', $payload) || array_key_exists('hit_chance', $payload) || ! empty($payload['special']))
+        <div class="battle-event-row__details">
+            @if (array_key_exists('attack_zone', $payload))
+                <span>Зона: {{ $zoneLabels[$payload['attack_zone']] ?? $payload['attack_zone'] }}</span>
+            @endif
+            @if (array_key_exists('hit_chance', $payload))
+                <span>Шанс: {{ $payload['hit_chance'] }}%</span>
+            @endif
+            @if (! empty($payload['special']))
+                @foreach ($payload['special'] as $attribute => $value)
+                    <span class="battle-event-effect--{{ $perspective }}">
+                        +{{ $value }} {{ \App\Models\Creature::SPECIAL_LABELS[$attribute] ?? strtoupper(substr($attribute, 0, 1)) }}
+                    </span>
+                @endforeach
+            @endif
+        </div>
+    @endif
 </article>
