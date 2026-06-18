@@ -31,6 +31,7 @@ class ShopItemGenerationTest extends TestCase
         $this->assertContains($firstBatch->count(), [2, 3]);
         $this->assertSame($firstBatch->count(), Item::query()->where('is_generated', true)->count());
         $this->assertTrue($firstBatch->every(fn (Item $item): bool => $item->is_active && $item->generated_at !== null));
+        $this->assertTrue($firstBatch->every(fn (Item $item): bool => str_starts_with((string) $item->icon, 'game-assets/shop/')));
 
         $this->assertCount(0, $service->generateIfDue());
         $this->assertSame($firstBatch->count(), Item::query()->where('is_generated', true)->count());

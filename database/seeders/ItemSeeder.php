@@ -17,6 +17,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Усиленная бронепластина',
             'code' => 'reinforced-hide-plate',
+            'icon' => 'game-assets/shop/reinforced-hide-plate.webp',
             'description' => 'Грубая, но надежная защита корпуса для первых арен.',
             'item_type' => 'equipment',
             'rarity' => 'common',
@@ -28,6 +29,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Ядовитое жало',
             'code' => 'venom-sting',
+            'icon' => 'game-assets/shop/venom-sting.webp',
             'description' => 'Редкая насадка для инсектов, усиливающая быстрые атаки.',
             'item_type' => 'equipment',
             'rarity' => 'rare',
@@ -40,6 +42,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Боевой процессор',
             'code' => 'combat-processor',
+            'icon' => 'game-assets/shop/combat-processor.webp',
             'description' => 'Элитный модуль анализа угроз для механоидов.',
             'item_type' => 'module',
             'rarity' => 'elite',
@@ -53,6 +56,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Лечебная сыворотка',
             'code' => 'healing-serum',
+            'icon' => 'game-assets/shop/healing-serum.webp',
             'description' => 'Расходуемое зелье, восстанавливающее здоровье сущности.',
             'item_type' => 'potion',
             'rarity' => 'common',
@@ -64,6 +68,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Силовой стимулятор',
             'code' => 'strength-stimulant',
+            'icon' => 'game-assets/shop/strength-stimulant.webp',
             'description' => 'Редкий расходник, навсегда повышающий силу сущности на 1.',
             'item_type' => 'consumable',
             'rarity' => 'rare',
@@ -76,6 +81,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Гиперплазма здоровья',
             'code' => 'vital-plasma',
+            'icon' => 'game-assets/shop/vital-plasma.webp',
             'description' => 'Элитный препарат, повышающий максимальное здоровье сущности.',
             'item_type' => 'potion',
             'rarity' => 'elite',
@@ -88,6 +94,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Древнее ядро',
             'code' => 'ancient-core',
+            'icon' => 'game-assets/shop/ancient-core.webp',
             'description' => 'Уникальный артефакт с сильным, но дорогим усилением.',
             'item_type' => 'artifact',
             'rarity' => 'unique',
@@ -101,6 +108,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Ошейник вожака',
             'code' => 'pack-leader-collar',
+            'icon' => 'game-assets/shop/pack-leader-collar.webp',
             'description' => 'Аксессуар для животных, раскрывающий лидерские инстинкты.',
             'item_type' => 'equipment',
             'rarity' => 'rare',
@@ -114,6 +122,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Штурмовой визор',
             'code' => 'assault-visor',
+            'icon' => 'game-assets/shop/assault-visor.webp',
             'description' => 'Оптический комплект для точного выбора зоны атаки.',
             'item_type' => 'equipment',
             'rarity' => 'common',
@@ -125,6 +134,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Импульсный резак',
             'code' => 'pulse-cutter',
+            'icon' => 'game-assets/shop/pulse-cutter.webp',
             'description' => 'Компактное оружие ближнего боя с усиленным приводом.',
             'item_type' => 'equipment',
             'rarity' => 'rare',
@@ -136,6 +146,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Нейронный ускоритель',
             'code' => 'neural-accelerator',
+            'icon' => 'game-assets/shop/neural-accelerator.webp',
             'description' => 'Модуль ускоренной обработки боевых сигналов.',
             'item_type' => 'module',
             'rarity' => 'elite',
@@ -148,6 +159,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Оберег стойкости',
             'code' => 'endurance-charm',
+            'icon' => 'game-assets/shop/endurance-charm.webp',
             'description' => 'Талисман, помогающий выдерживать тяжёлые удары.',
             'item_type' => 'artifact',
             'rarity' => 'rare',
@@ -159,6 +171,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Тактический стимулятор',
             'code' => 'tactical-stimulant',
+            'icon' => 'game-assets/shop/tactical-stimulant.webp',
             'description' => 'Одноразовая смесь для повышения реакции сущности.',
             'item_type' => 'consumable',
             'rarity' => 'common',
@@ -170,6 +183,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Регенеративный гель',
             'code' => 'regenerative-gel',
+            'icon' => 'game-assets/shop/regenerative-gel.webp',
             'description' => 'Полевое средство для быстрого восстановления здоровья.',
             'item_type' => 'potion',
             'rarity' => 'rare',
@@ -181,6 +195,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Сенсорный плащ',
             'code' => 'sensor-cloak',
+            'icon' => 'game-assets/shop/sensor-cloak.webp',
             'description' => 'Защитное покрытие, затрудняющее чтение движений владельца.',
             'item_type' => 'equipment',
             'rarity' => 'elite',
@@ -193,6 +208,7 @@ class ItemSeeder extends Seeder
         [
             'name' => 'Кристалл вероятности',
             'code' => 'probability-crystal',
+            'icon' => 'game-assets/shop/probability-crystal.webp',
             'description' => 'Артефакт, слегка склоняющий случай в пользу владельца.',
             'item_type' => 'artifact',
             'rarity' => 'unique',
@@ -220,6 +236,7 @@ class ItemSeeder extends Seeder
                 'code' => $item['code'],
             ], [
                 'name' => $item['name'],
+                'icon' => $item['icon'] ?? null,
                 'description' => $item['description'],
                 'item_type' => $item['item_type'],
                 'rarity' => $item['rarity'],

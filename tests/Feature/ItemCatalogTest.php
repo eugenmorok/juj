@@ -39,6 +39,7 @@ class ItemCatalogTest extends TestCase
         $this->assertDatabaseHas('items', [
             'code' => 'reinforced-hide-plate',
             'rarity' => 'common',
+            'icon' => 'game-assets/shop/reinforced-hide-plate.webp',
             'slot_key' => 'body',
             'is_active' => true,
         ]);

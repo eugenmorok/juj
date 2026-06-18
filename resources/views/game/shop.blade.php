@@ -1,29 +1,46 @@
-@extends('layouts.app', ['title' => 'Магазин'])
+@extends('layouts.app', ['title' => 'Магазин', 'wide' => true])
 
 @section('content')
-    <div class="space-y-8">
-        <div class="flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <p class="text-sm font-medium uppercase text-emerald-300">Экономика</p>
-                <h1 class="mt-2 text-3xl font-semibold text-white">Магазин</h1>
-                <p class="mt-1 text-sm text-zinc-400">Покупка экипировки, расходников, услуг и расширения общего инвентаря.</p>
+    <div class="shop-screen space-y-6">
+        <section class="shop-hero">
+            <div class="shop-hero__content">
+                <div>
+                    <p class="shop-kicker">Торговая сеть арены</p>
+                    <h1 class="shop-title">Лавка реликвий и механизмов</h1>
+                    <p class="shop-subtitle">Снаряжение из руин, алхимические препараты и редкие механизмы. Витрина меняется, но найденные товары остаются в торговой сети.</p>
+                </div>
+                <div class="shop-wallet">
+                    <div>
+                        <span>Жетоны</span>
+                        <strong>{{ $user->tokens }}</strong>
+                    </div>
+                    <div>
+                        <span>Скидка</span>
+                        <strong>{{ $user->shopDiscountPercent() }}%</strong>
+                    </div>
+                    <div>
+                        <span>Инвентарь</span>
+                        <strong>{{ $playerInventory->usedSlots() }}/{{ $playerInventory->capacity() }}</strong>
+                    </div>
+                </div>
             </div>
-            <div class="flex flex-wrap gap-2 text-sm">
-                <span class="rounded-md border border-emerald-500/40 px-3 py-2 text-emerald-100">
-                    {{ $user->tokens }} токенов
-                </span>
-                <span class="rounded-md border border-sky-500/40 px-3 py-2 text-sky-100">
-                    Скидка {{ $user->shopDiscountPercent() }}%
-                </span>
-                <span class="rounded-md border border-zinc-800 px-3 py-2 text-zinc-300">
-                    Инвентарь {{ $playerInventory->usedSlots() }}/{{ $playerInventory->capacity() }}
-                </span>
+            <div class="shop-hero__rail">
+                <span>В витрине: {{ $items->count() }} предметов</span>
+                <span>Новые находки: раз в 3 часа</span>
+                <span>Каталог хранит ранее найденные реликвии</span>
             </div>
-        </div>
+        </section>
 
         @include('partials.form-errors')
 
-        <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+        <section class="shop-panel shop-filters">
+            <div class="shop-panel__heading">
+                <div>
+                    <span class="shop-panel__eyebrow">Пульт снабжения</span>
+                    <h2>Поиск по торговым ячейкам</h2>
+                </div>
+                <span class="shop-panel__ornament" aria-hidden="true">◆</span>
+            </div>
             <form method="GET" action="{{ route('shop') }}" class="grid gap-3 md:grid-cols-6">
                 <label class="space-y-1 md:col-span-2">
                     <span class="text-xs uppercase text-zinc-500">Поиск</span>
@@ -97,11 +114,14 @@
             </form>
         </section>
 
-        <section class="grid gap-6 lg:grid-cols-[1fr_20rem]">
+        <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
             <div class="space-y-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="text-xl font-semibold text-white">Товары</h2>
-                    <span class="text-sm text-zinc-400">Найдено: {{ $items->count() }}</span>
+                <div class="shop-section-heading">
+                    <div>
+                        <span>Текущая ротация</span>
+                        <h2>Товары на прилавке</h2>
+                    </div>
+                    <span class="shop-counter">{{ $items->count() }} / 16</span>
                 </div>
 
                 @if ($items->isEmpty())
@@ -109,7 +129,7 @@
                         Под выбранные фильтры товары не найдены.
                     </div>
                 @else
-                    <div class="grid gap-4 xl:grid-cols-2">
+                    <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
                         @foreach ($items as $item)
                             @php
                                 $uniqueOwned = $item->is_unique && in_array($item->id, $ownedUniqueItemIds, true);
@@ -120,49 +140,56 @@
                                 $canBuy = $available && $hasTokens && $hasSpace && ! $uniqueOwned;
                             @endphp
 
-                            <article class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
-                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                    <div class="flex min-w-0 items-start gap-3">
-                                        <x-game-icon :icon="$item->icon" :label="$item->name" />
-                                        <div class="min-w-0">
-                                            <h3 class="text-lg font-semibold text-white">{{ $item->name }}</h3>
-                                            <div class="mt-2 flex flex-wrap items-center gap-2">
-                                                <span class="text-xs text-zinc-500">{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
-                                                @include('partials.rarity-badge', ['item' => $item])
-                                            </div>
-                                        </div>
+                            <article class="shop-item-card" data-rarity="{{ $item->rarity }}">
+                                <div class="shop-item-card__glow" aria-hidden="true"></div>
+                                <div class="flex items-start gap-4">
+                                    <div class="shop-item-card__portrait">
+                                        <x-game-icon :icon="$item->icon" :label="$item->name" size="lg" class="shop-item-card__icon" />
+                                        <span>{{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }}</span>
                                     </div>
-                                    <span class="rounded-md border border-emerald-500/40 px-3 py-1 text-sm text-emerald-100">
-                                        {{ $itemPrice }} ток.
-                                        @if ($itemPrice !== $item->price)
-                                            <span class="ml-1 text-xs text-zinc-400 line-through">{{ $item->price }}</span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-start justify-between gap-2">
+                                            <div class="min-w-0">
+                                                <h3 class="shop-item-card__title">{{ $item->name }}</h3>
+                                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                                    @include('partials.rarity-badge', ['item' => $item])
+                                                    @if ($item->is_generated)
+                                                        <span class="shop-found-badge">Новая находка</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                            <span class="shop-price">
+                                                <strong>{{ $itemPrice }}</strong> жет.
+                                                @if ($itemPrice !== $item->price)
+                                                    <small>{{ $item->price }}</small>
+                                                @endif
+                                            </span>
+                                        </div>
+                                        @if ($item->description)
+                                            <p class="shop-item-card__description">{{ $item->description }}</p>
                                         @endif
-                                    </span>
+                                    </div>
                                 </div>
 
-                                @if ($item->description)
-                                    <p class="mt-3 text-sm text-zinc-400">{{ $item->description }}</p>
-                                @endif
-
-                                <dl class="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-                                    <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                                <dl class="shop-item-card__stats">
+                                    <div>
                                         <dt class="text-xs text-zinc-500">Уровень</dt>
                                         <dd class="mt-1 text-zinc-200">{{ $item->required_level }}</dd>
                                     </div>
-                                    <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
+                                    <div>
                                         <dt class="text-xs text-zinc-500">Длительность</dt>
                                         <dd class="mt-1 text-zinc-200">{{ \App\Models\Item::DURATIONS[$item->duration_type] ?? $item->duration_type }}</dd>
                                     </div>
-                                    <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 sm:col-span-2">
+                                    <div class="sm:col-span-2">
                                         <dt class="text-xs text-zinc-500">Для каких сущностей</dt>
                                         <dd class="mt-1 text-zinc-200">{{ $itemApplicability[$item->id] ?? 'Все типы сущностей' }}</dd>
                                     </div>
                                 </dl>
 
                                 @if ($item->bonuses)
-                                    <div class="mt-4 flex flex-wrap gap-2">
+                                    <div class="shop-bonuses">
                                         @foreach ($item->bonuses as $bonus => $value)
-                                            <span class="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300">
+                                            <span>
                                                 {{ $bonus }} {{ (int) $value > 0 ? '+' : '' }}{{ $value }}
                                             </span>
                                         @endforeach
@@ -183,7 +210,7 @@
                                     @csrf
                                     <button
                                         type="submit"
-                                        class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                        class="shop-buy-button"
                                         @disabled(! $canBuy)
                                     >
                                         Купить
@@ -196,7 +223,8 @@
             </div>
 
             <aside class="space-y-4">
-                <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                <section class="shop-panel shop-side-card">
+                    <div class="shop-side-card__icon">▦</div>
                     <h2 class="font-semibold text-white">Расширение инвентаря</h2>
                     <p class="mt-2 text-sm text-zinc-400">
                         Следующая ячейка стоит {{ $inventorySlotCost }} токенов.
@@ -205,7 +233,7 @@
                         @csrf
                         <button
                             type="submit"
-                            class="rounded-md border border-emerald-500/50 px-4 py-2 text-sm text-emerald-100 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="shop-side-button"
                             @disabled($user->tokens < $inventorySlotCost)
                         >
                             Купить ячейку
@@ -213,7 +241,8 @@
                     </form>
                 </section>
 
-                <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                <section class="shop-panel shop-side-card">
+                    <div class="shop-side-card__icon">⚙</div>
                     <h2 class="font-semibold text-white">Услуги</h2>
 
                     @if ($creatures->isEmpty())

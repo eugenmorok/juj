@@ -74,6 +74,7 @@ class ShopItemGenerationService
             'name' => $name,
             'code' => 'generated-'.now()->format('YmdHis').'-'.Str::lower(Str::random(8)),
             'description' => $this->description($itemType, $rarity),
+            'icon' => $this->iconFor($itemType, $rarity),
             'item_type' => $itemType,
             'rarity' => $rarity,
             'price' => $this->price($rarity, $bonuses),
@@ -203,5 +204,22 @@ class ShopItemGenerationService
         $rarityLabel = Item::RARITIES[$rarity] ?? $rarity;
 
         return "{$rarityLabel} предмет категории «{$type}», созданный торговой сетью арены.";
+    }
+
+    private function iconFor(string $itemType, string $rarity): string
+    {
+        $icons = match ($itemType) {
+            'potion' => ['healing-serum', 'vital-plasma', 'regenerative-gel'],
+            'consumable' => ['strength-stimulant', 'tactical-stimulant'],
+            'module' => ['combat-processor', 'neural-accelerator'],
+            'artifact' => ['ancient-core', 'endurance-charm', 'probability-crystal'],
+            default => ['reinforced-hide-plate', 'venom-sting', 'pack-leader-collar', 'assault-visor', 'pulse-cutter', 'sensor-cloak'],
+        };
+
+        if ($rarity === 'unique') {
+            $icons = ['ancient-core', 'probability-crystal'];
+        }
+
+        return 'game-assets/shop/'.collect($icons)->random().'.webp';
     }
 }
