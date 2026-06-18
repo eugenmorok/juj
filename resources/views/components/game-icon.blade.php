@@ -12,8 +12,11 @@
         'md' => 'h-12 w-12 text-sm',
         'lg' => 'h-16 w-16 text-base',
     ][$size] ?? 'h-12 w-12 text-sm';
-    $isImage = $value !== '' && preg_match('/^(https?:\/\/|\/|data:image\/|storage\/|images\/|assets\/)/i', $value) === 1;
-    $src = $isImage && preg_match('/^(https?:\/\/|\/|data:image\/)/i', $value) === 1 ? $value : ($isImage ? asset($value) : null);
+    $isImage = $value !== '' && (
+        preg_match('/^(https?:\/\/|\/|data:image\/|storage\/|images\/|assets\/|game-assets\/)/i', $value) === 1
+        || preg_match('/\.(png|jpe?g|webp|gif|avif)(\?.*)?$/i', $value) === 1
+    );
+    $src = $isImage ? \App\Support\MediaUrl::resolve($value) : null;
     $fallback = $value !== '' && ! $isImage ? $value : ($labelText !== '' ? mb_substr($labelText, 0, 2) : '?');
 @endphp
 

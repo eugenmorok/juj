@@ -6,6 +6,7 @@ use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
 use App\Models\EquipmentSlot;
 use App\Models\Item;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -69,6 +70,26 @@ class ItemForm
                         Textarea::make('description')
                             ->label('Описание')
                             ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+                Section::make('Мультимедиа эффекта')
+                    ->schema([
+                        FileUpload::make('effect_image')
+                            ->label('Изображение эффекта')
+                            ->helperText('Прозрачный WebP/PNG для вспышки, лечения или усиления.')
+                            ->disk('public')
+                            ->directory('media/items/effects')
+                            ->visibility('public')
+                            ->image()
+                            ->maxSize(4096),
+                        FileUpload::make('effect_sound')
+                            ->label('Звук эффекта')
+                            ->helperText('OGG, MP3 или WAV. Звук будет подключен на следующем мультимедиа-этапе.')
+                            ->disk('public')
+                            ->directory('media/items/sounds')
+                            ->visibility('public')
+                            ->acceptedFileTypes(['audio/ogg', 'audio/mpeg', 'audio/wav'])
+                            ->maxSize(8192),
                     ])
                     ->columns(2),
                 Section::make('Экипировка и ограничения')

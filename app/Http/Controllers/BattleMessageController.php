@@ -41,7 +41,12 @@ class BattleMessageController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Сообщение отправлено.',
-                ...$interactiveBattles->statePayload($battle, $request->user(), true),
+                ...$interactiveBattles->statePayload(
+                    $battle,
+                    $request->user(),
+                    true,
+                    $request->integer('after_event_id') ?: null,
+                ),
             ]);
         }
 

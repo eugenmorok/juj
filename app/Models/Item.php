@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'code',
     'description',
     'icon',
+    'effect_image',
+    'effect_sound',
     'item_type',
     'rarity',
     'price',

@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'name',
     'is_active',
+    'battle_background_image',
     'win_xp_per_level',
     'draw_xp_per_level',
     'loss_xp_per_level',
@@ -55,6 +56,7 @@ class ArenaSetting extends Model
     public const BALANCE_FIELDS = [
         'name',
         'is_active',
+        'battle_background_image',
         'win_xp_per_level',
         'draw_xp_per_level',
         'loss_xp_per_level',
@@ -94,6 +96,7 @@ class ArenaSetting extends Model
         return [
             'name' => self::DEFAULT_NAME,
             'is_active' => true,
+            'battle_background_image' => 'game-assets/arena/industrial-fantasy-arena.webp',
             'win_xp_per_level' => 100,
             'draw_xp_per_level' => 50,
             'loss_xp_per_level' => 20,

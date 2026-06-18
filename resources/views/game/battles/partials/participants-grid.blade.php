@@ -21,7 +21,7 @@
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="flex min-w-0 items-start gap-3">
                     <x-game-icon
-                        :icon="$participant->creature->species?->icon ?? $participant->creature->type?->icon"
+                        :icon="$participant->creature->species?->portrait_image ?? $participant->creature->species?->icon ?? $participant->creature->type?->icon"
                         :label="$participant->creature->name"
                         size="lg"
                     />

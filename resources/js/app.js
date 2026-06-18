@@ -95,6 +95,7 @@ const setupBattleRealtime = () => {
     const participantsPanel = container.querySelector('[data-battle-participants]');
     const eventsPanel = container.querySelector('[data-battle-events]');
     const chatPanel = container.querySelector('[data-battle-chat]');
+    const visualizerElement = container.querySelector('[data-battle-visualizer]');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
     if (!stateUrl || !actionPanel || !participantsPanel || !eventsPanel || !chatPanel) {
@@ -153,6 +154,7 @@ const setupBattleRealtime = () => {
             chatPanel.innerHTML = state.fragments.chat_html ?? '';
         }
 
+        visualizerElement?.battleVisualizer?.applyState(state);
         updateCountdown();
 
         if (state.status !== 'running' && pollTimer) {
@@ -173,6 +175,12 @@ const setupBattleRealtime = () => {
 
             if (includeFragments) {
                 url.searchParams.set('include_fragments', '1');
+            }
+
+            const afterEventId = Number(visualizerElement?.dataset.battleLatestEventId || 0);
+
+            if (afterEventId > 0) {
+                url.searchParams.set('after_event_id', String(afterEventId));
             }
 
             const response = await fetch(url, {
@@ -265,9 +273,11 @@ const setupBattleRealtime = () => {
             }
 
             try {
+                const formData = new FormData(chatForm);
+                formData.append('after_event_id', visualizerElement?.dataset.battleLatestEventId || '0');
                 const response = await fetch(chatForm.action, {
                     method: 'POST',
-                    body: new FormData(chatForm),
+                    body: formData,
                     credentials: 'same-origin',
                     headers: {
                         Accept: 'application/json',
@@ -334,9 +344,11 @@ const setupBattleRealtime = () => {
         }
 
         try {
+            const formData = new FormData(form);
+            formData.append('after_event_id', visualizerElement?.dataset.battleLatestEventId || '0');
             const response = await fetch(form.action, {
                 method: 'POST',
-                body: new FormData(form),
+                body: formData,
                 credentials: 'same-origin',
                 headers: {
                     Accept: 'application/json',
@@ -391,10 +403,12 @@ const setupBattleRealtime = () => {
         if (echo && channelName) {
             echo.leave(channelName);
         }
+
+        visualizerElement?.battleVisualizer?.destroy();
     }, { once: true });
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     let savedTheme = document.documentElement.dataset.theme;
 
     try {
@@ -410,6 +424,11 @@ document.addEventListener('DOMContentLoaded', () => {
             applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light');
         });
     });
+
+    if (document.querySelector('[data-battle-visualizer]')) {
+        const { setupBattleVisualizer } = await import('./battle-visualizer');
+        await setupBattleVisualizer();
+    }
 
     setupBattleRealtime();
 });

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CreatureSpecies\Schemas;
 
 use App\Models\CreatureSpecies;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -52,6 +53,41 @@ class CreatureSpeciesForm
                         Textarea::make('description')
                             ->label('Описание')
                             ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+                Section::make('Мультимедиа')
+                    ->description('WebP или PNG для портрета и статичной сцены. Spritesheet состоит из изображения и JSON-описания кадров.')
+                    ->schema([
+                        FileUpload::make('portrait_image')
+                            ->label('Портрет')
+                            ->disk('public')
+                            ->directory('media/species/portraits')
+                            ->visibility('public')
+                            ->image()
+                            ->imageEditor()
+                            ->maxSize(4096),
+                        FileUpload::make('battle_image')
+                            ->label('Боевое изображение')
+                            ->helperText('Рекомендуется прозрачный WebP или PNG до 2048 x 2048.')
+                            ->disk('public')
+                            ->directory('media/species/battle')
+                            ->visibility('public')
+                            ->image()
+                            ->maxSize(8192),
+                        FileUpload::make('battle_spritesheet_image')
+                            ->label('Spritesheet: изображение')
+                            ->disk('public')
+                            ->directory('media/species/spritesheets')
+                            ->visibility('public')
+                            ->image()
+                            ->maxSize(12288),
+                        FileUpload::make('battle_spritesheet_data')
+                            ->label('Spritesheet: PixiJS JSON')
+                            ->disk('public')
+                            ->directory('media/species/spritesheets')
+                            ->visibility('public')
+                            ->acceptedFileTypes(['application/json', 'text/json'])
+                            ->maxSize(2048),
                     ])
                     ->columns(2),
                 Section::make('Базовые SPECIAL')

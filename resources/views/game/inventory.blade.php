@@ -181,7 +181,7 @@
                             <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div class="flex min-w-0 items-start gap-3">
-                                        <x-game-icon :icon="$creature->species?->icon ?? $creature->type?->icon" :label="$creature->name" size="sm" />
+                                        <x-game-icon :icon="$creature->species?->portrait_image ?? $creature->species?->icon ?? $creature->type?->icon" :label="$creature->name" size="sm" />
                                         <div class="min-w-0">
                                             <h3 class="text-lg font-semibold text-white">{{ $creature->name }}</h3>
                                             <p class="mt-1 text-sm text-zinc-400">{{ $creature->type->name }} / {{ $creature->species->name }}</p>

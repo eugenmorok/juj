@@ -27,7 +27,12 @@ class InteractiveBattleActionController extends Controller
                 'message' => $battle->status === Battle::STATUS_FINISHED
                     ? 'Шаг принят, бой завершен.'
                     : 'Тактика шага принята.',
-                ...$interactiveBattles->statePayload($battle, $request->user(), true),
+                ...$interactiveBattles->statePayload(
+                    $battle,
+                    $request->user(),
+                    true,
+                    $request->integer('after_event_id') ?: null,
+                ),
             ]);
         }
 

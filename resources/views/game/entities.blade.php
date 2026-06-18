@@ -39,7 +39,7 @@
                         <a href="{{ route('entities.show', $creature) }}" class="rounded-md border border-zinc-800 bg-zinc-900 p-5 hover:border-emerald-500/60">
                             <div class="flex flex-wrap items-start justify-between gap-3">
                                 <div class="flex min-w-0 items-start gap-3">
-                                    <x-game-icon :icon="$creature->species?->icon ?? $creature->type?->icon" :label="$creature->name" />
+                                    <x-game-icon :icon="$creature->species?->portrait_image ?? $creature->species?->icon ?? $creature->type?->icon" :label="$creature->name" />
                                     <div class="min-w-0">
                                         <h3 class="truncate text-lg font-semibold text-white">{{ $creature->name }}</h3>
                                         <p class="mt-1 text-sm text-zinc-400">{{ $creature->type->name }} / {{ $creature->species->name }}</p>
@@ -118,7 +118,7 @@
                                     @foreach ($type->species as $species)
                                         <article class="grid gap-4 px-5 py-4 lg:grid-cols-[1fr_auto] lg:items-center">
                                             <div class="flex min-w-0 items-start gap-3">
-                                                <x-game-icon :icon="$species->icon ?? $type->icon" :label="$species->name" size="sm" />
+                                                <x-game-icon :icon="$species->portrait_image ?? $species->icon ?? $type->icon" :label="$species->name" size="sm" />
                                                 <div class="min-w-0">
                                                     <div class="flex flex-wrap items-center gap-2">
                                                         <h4 class="font-semibold text-white">{{ $species->name }}</h4>

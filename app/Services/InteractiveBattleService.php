@@ -15,6 +15,7 @@ use App\Models\Inventory;
 use App\Models\InventoryItem;
 use App\Models\ItemInstance;
 use App\Models\User;
+use App\Support\BattlePresentation;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -235,7 +236,12 @@ class InteractiveBattleService
     /**
      * @return array<string, mixed>
      */
-    public function statePayload(Battle $battle, User $viewer, bool $includeFragments = false): array
+    public function statePayload(
+        Battle $battle,
+        User $viewer,
+        bool $includeFragments = false,
+        ?int $afterEventId = null,
+    ): array
     {
         $snapshot = $this->cachedState($battle);
         $ownParticipant = collect($snapshot['participants'])->firstWhere('user_id', $viewer->id);
@@ -251,6 +257,7 @@ class InteractiveBattleService
         ];
 
         $payload['marker'] = $this->battleMarker($payload);
+        $payload['events'] = $this->presentationEvents($battle, $afterEventId);
 
         if ($includeFragments) {
             $payload['fragments'] = $this->renderBattleFragments($battle, $viewer);
@@ -1087,7 +1094,7 @@ class InteractiveBattleService
         $battle = Battle::query()->whereKey($battle->id)->firstOrFail();
         $participants = BattleParticipant::query()
             ->where('battle_id', $battle->id)
-            ->with(['creature.user'])
+            ->with(['creature.user', 'creature.type', 'creature.species'])
             ->orderBy('id')
             ->get();
         $activeRound = $battle->current_round > 0
@@ -1122,6 +1129,9 @@ class InteractiveBattleService
             'latest_message_id' => $latestMessageId ? (int) $latestMessageId : null,
             'events_count' => $eventsCount,
             'messages_count' => $messagesCount,
+            'scene' => [
+                'background_url' => BattlePresentation::arenaBackground(),
+            ],
             'active_round' => $activeRound ? [
                 'id' => $activeRound->id,
                 'round_number' => $activeRound->round_number,
@@ -1132,29 +1142,29 @@ class InteractiveBattleService
                 'first_actor_name' => $activeRound->firstActor?->name,
             ] : null,
             'participants' => $participants
-                ->map(fn (BattleParticipant $participant): array => [
-                    'user_id' => $participant->user_id,
-                    'creature_id' => $participant->creature_id,
-                    'creature_name' => $participant->creature?->name,
-                    'owner_name' => $participant->creature?->user?->name,
-                    'hp_after' => $participant->hp_after,
-                    'hp_before' => $participant->hp_before,
-                    'result' => $participant->result,
-                    'level_before' => $participant->level_before,
-                    'level_after' => $participant->level_after,
-                    'reward_xp' => $participant->reward_xp,
-                    'reward_player_xp' => $participant->reward_player_xp,
-                    'reward_tokens' => $participant->reward_tokens,
-                    'reward_development_points' => $participant->reward_development_points,
-                    'reward_creation_points' => $participant->reward_creation_points,
-                    'reward_multiplier' => $participant->reward_multiplier,
-                    'power_score_before' => $participant->power_score_before,
-                    'player_level_before' => $participant->player_level_before,
-                    'player_level_after' => $participant->player_level_after,
-                ])
+                ->map(fn (BattleParticipant $participant): array => BattlePresentation::participant($participant))
                 ->values()
                 ->all(),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function presentationEvents(Battle $battle, ?int $afterEventId): array
+    {
+        $query = BattleEvent::query()
+            ->where('battle_id', $battle->id)
+            ->with(['actor', 'target']);
+
+        $events = $afterEventId !== null
+            ? $query->where('id', '>', $afterEventId)->oldest('id')->limit(30)->get()
+            : $query->latest('id')->limit(12)->get()->sortBy('id')->values();
+
+        return $events
+            ->map(fn (BattleEvent $event): array => BattlePresentation::event($event))
+            ->values()
+            ->all();
     }
 
     /**

@@ -61,6 +61,8 @@
             @include('game.battles.partials.participants-grid', ['battle' => $battle])
         </div>
 
+        @include('game.battles.partials.visual-stage', ['battle' => $battle])
+
         <div class="grid gap-6 xl:grid-cols-[minmax(28rem,0.85fr)_minmax(34rem,1.15fr)]">
             <div data-battle-action-panel>
                 @include('game.battles.partials.action-panel', [

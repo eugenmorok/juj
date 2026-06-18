@@ -65,12 +65,20 @@ class CreatureCatalogSeeder extends Seeder
         }
 
         foreach (self::SPECIES as $species) {
+            $battleImage = match ($species['type']) {
+                'mechanoids' => 'game-assets/creatures/mechanoid.webp',
+                'insects' => 'game-assets/creatures/insect-mantis.webp',
+                default => 'game-assets/creatures/animal-wolf.webp',
+            };
+
             CreatureSpecies::query()->updateOrCreate([
                 'code' => $species['code'],
             ], [
                 'creature_type_id' => $types[$species['type']]->id,
                 'name' => $species['name'],
                 'description' => 'Стартовый вид для создания первой сущности.',
+                'portrait_image' => $battleImage,
+                'battle_image' => $battleImage,
                 'rarity' => 'common',
                 'base_strength' => $species['s'],
                 'base_perception' => $species['p'],

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ArenaSettings\Schemas;
 
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -24,6 +25,18 @@ class ArenaSettingForm
                             ->default(true),
                     ])
                     ->columns(2),
+                Section::make('Оформление арены')
+                    ->schema([
+                        FileUpload::make('battle_background_image')
+                            ->label('Фон боевой сцены')
+                            ->helperText('Рекомендуемый размер 1920 x 1080, формат WebP или PNG.')
+                            ->disk('public')
+                            ->directory('media/arena/backgrounds')
+                            ->visibility('public')
+                            ->image()
+                            ->imageEditor()
+                            ->maxSize(12288),
+                    ]),
                 Section::make('Награды за бой')
                     ->schema([
                         TextInput::make('win_xp_per_level')

@@ -237,3 +237,199 @@ textarea {
 [data-theme='light'] .theme-toggle-dot {
     background: var(--arena-accent-strong);
 }
+
+.battle-visual-stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--arena-border);
+    border-radius: 8px;
+    background: var(--arena-panel-strong);
+    box-shadow: var(--arena-shadow);
+}
+
+.battle-visual-stage__viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    min-height: 24rem;
+    max-height: 47rem;
+    overflow: hidden;
+    background: #18241f;
+}
+
+.battle-visual-stage__canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.battle-visual-stage__fallback {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    transition: opacity 180ms ease;
+}
+
+.battle-visual-stage__fallback.is-hidden {
+    pointer-events: none;
+    opacity: 0;
+}
+
+.battle-visual-stage__background {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.battle-visual-stage__fighter {
+    position: absolute;
+    bottom: 7%;
+    z-index: 1;
+    width: clamp(11rem, 27vw, 31rem);
+    margin: 0;
+    text-align: center;
+}
+
+.battle-visual-stage__fighter--left {
+    left: 3%;
+}
+
+.battle-visual-stage__fighter--right {
+    right: 3%;
+}
+
+.battle-visual-stage__fighter img {
+    width: 100%;
+    max-height: 30rem;
+    object-fit: contain;
+    filter: drop-shadow(0 16px 12px rgba(6, 11, 8, 0.5));
+}
+
+.battle-visual-stage__fighter--right img {
+    transform: scaleX(-1);
+}
+
+.battle-visual-stage__fighter figcaption {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgba(238, 211, 142, 0.62);
+    border-radius: 4px;
+    background: rgba(22, 32, 27, 0.82);
+    color: #fff0c7;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.battle-visual-stage__toolbar {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    left: 0.75rem;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    pointer-events: none;
+}
+
+.battle-visual-stage__round {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid rgba(238, 211, 142, 0.58);
+    border-radius: 4px;
+    background: rgba(21, 31, 26, 0.86);
+    color: #fff0c7;
+    font-size: 0.78rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.battle-visual-stage__controls {
+    display: flex;
+    gap: 0.4rem;
+    pointer-events: auto;
+}
+
+.battle-visual-stage__controls button {
+    display: inline-flex;
+    width: 2.35rem;
+    height: 2.35rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(238, 211, 142, 0.58);
+    border-radius: 4px;
+    background: rgba(21, 31, 26, 0.86);
+    color: #fff0c7;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.battle-visual-stage__controls button:hover,
+.battle-visual-stage__controls button:focus-visible {
+    border-color: #d8c062;
+    background: rgba(49, 67, 55, 0.95);
+    outline: none;
+}
+
+.battle-visual-stage__announcer {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    z-index: 4;
+    width: min(90%, 54rem);
+    padding: 0.55rem 0.85rem;
+    transform: translate(-50%, 0.5rem);
+    border: 1px solid rgba(238, 211, 142, 0.52);
+    border-radius: 4px;
+    background: rgba(18, 28, 23, 0.88);
+    color: #fff0c7;
+    font-size: 0.86rem;
+    opacity: 0;
+    text-align: center;
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.battle-visual-stage__announcer.is-visible {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+
+@media (max-width: 760px) {
+    .battle-visual-stage__viewport {
+        aspect-ratio: 4 / 3;
+        min-height: 20rem;
+    }
+
+    .battle-visual-stage__fighter {
+        bottom: 11%;
+        width: 48%;
+    }
+
+    .battle-visual-stage__fighter--left {
+        left: -2%;
+    }
+
+    .battle-visual-stage__fighter--right {
+        right: -2%;
+    }
+
+    .battle-visual-stage__announcer {
+        bottom: 0.65rem;
+        font-size: 0.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .battle-visual-stage__fallback,
+    .battle-visual-stage__announcer {
+        transition: none;
+    }
+}

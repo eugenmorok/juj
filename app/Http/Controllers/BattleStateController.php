@@ -21,6 +21,7 @@ class BattleStateController extends Controller
                 $battle,
                 $request->user(),
                 $request->boolean('include_fragments'),
+                $request->integer('after_event_id') ?: null,
             ),
         );
     }
