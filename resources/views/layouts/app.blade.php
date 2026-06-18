@@ -94,7 +94,7 @@
                 </div>
             </header>
 
-            <main class="mx-auto {{ ($wide ?? false) ? 'max-w-[120rem]' : 'max-w-7xl' }} px-4 py-8 sm:px-6 lg:px-8">
+            <main class="{{ ($wide ?? false) ? 'mx-auto w-[99%] max-w-none px-2 sm:px-3' : 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8' }} py-8">
                 @if (session('status'))
                     <div class="mb-6 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
                         {{ session('status') }}

@@ -240,6 +240,7 @@ textarea {
 
 .battle-visual-stage {
     position: relative;
+    width: 100%;
     overflow: hidden;
     border: 1px solid var(--arena-border);
     border-radius: 8px;
@@ -248,9 +249,14 @@ textarea {
 }
 
 .battle-workspace {
+    --battle-stage-height: clamp(36rem, 38vw, 50rem);
     display: grid;
-    grid-template-columns: minmax(17rem, 21rem) minmax(38rem, 1fr) minmax(24rem, 31rem);
-    gap: 1rem;
+    width: 100%;
+    grid-template-columns:
+        clamp(16rem, 17vw, 20rem)
+        minmax(42rem, 1fr)
+        clamp(22rem, 25vw, 30rem);
+    gap: clamp(0.65rem, 0.8vw, 1rem);
     align-items: start;
 }
 
@@ -260,9 +266,13 @@ textarea {
     min-width: 0;
 }
 
+.battle-workspace__stage {
+    width: 100%;
+}
+
 .battle-tactics-card,
 .battle-events-card {
-    height: 36rem;
+    height: var(--battle-stage-height);
     overflow: hidden;
 }
 
@@ -640,9 +650,8 @@ textarea {
 .battle-visual-stage__viewport {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 7;
+    height: var(--battle-stage-height);
     min-height: 36rem;
-    max-height: 47rem;
     overflow: hidden;
     background: #18241f;
 }
@@ -940,9 +949,9 @@ textarea {
     opacity: 1;
 }
 
-@media (max-width: 1500px) {
+@media (max-width: 1599px) {
     .battle-workspace {
-        grid-template-columns: minmax(17rem, 21rem) minmax(36rem, 1fr);
+        grid-template-columns: clamp(16rem, 22vw, 20rem) minmax(42rem, 1fr);
     }
 
     .battle-workspace__log {
@@ -954,7 +963,7 @@ textarea {
     }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1120px) {
     .battle-workspace {
         display: flex;
         flex-direction: column;
@@ -963,6 +972,13 @@ textarea {
     .battle-workspace__stage {
         order: 1;
         width: 100%;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        scrollbar-width: thin;
+    }
+
+    .battle-visual-stage {
+        min-width: 44rem;
     }
 
     .battle-workspace__tactics {
@@ -983,6 +999,10 @@ textarea {
 }
 
 @media (max-width: 760px) {
+    .battle-visual-stage {
+        min-width: 0;
+    }
+
     .battle-participants-strip {
         grid-template-columns: 1fr;
     }
@@ -996,7 +1016,7 @@ textarea {
     }
 
     .battle-visual-stage__viewport {
-        aspect-ratio: 4 / 3;
+        height: clamp(20rem, 78vw, 28rem);
         min-height: 20rem;
     }
 
