@@ -1,10 +1,10 @@
 @if ($isInteractiveRunning && $activeRound && $ownParticipant)
-    <section class="rounded-md border border-emerald-500/30 bg-zinc-900 p-5">
-        <div class="grid gap-5">
+    <section class="battle-tactics-card rounded-md border border-emerald-500/30 bg-zinc-900 p-4">
+        <div class="grid gap-4">
             <div>
                 <p class="text-sm font-medium uppercase text-emerald-300">Шаг {{ $activeRound->round_number }}</p>
-                <h2 class="mt-2 text-xl font-semibold text-white">Выбор тактики</h2>
-                <dl class="mt-4 grid gap-3 text-sm">
+                <h2 class="mt-1 text-lg font-semibold text-white">Выбор тактики</h2>
+                <dl class="mt-3 grid grid-cols-2 gap-2 text-xs">
                     <div class="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2">
                         <dt class="text-zinc-500">Дедлайн</dt>
                         <dd class="mt-1 text-zinc-100">
@@ -19,9 +19,6 @@
                         <dd class="mt-1 text-zinc-100">{{ $activeRound->firstActor?->name ?? 'не определен' }}</dd>
                     </div>
                 </dl>
-                <p class="mt-4 text-sm text-zinc-400">
-                    Оба участника выбирают атаку и защиту. Если игрок не успеет, система подставит осторожную автотактику.
-                </p>
             </div>
 
             @if ($ownAction)
@@ -46,7 +43,7 @@
             @else
                 <form method="POST" action="{{ route('arena.battles.actions.store', $battle) }}" class="rounded-md border border-zinc-800 bg-zinc-950 p-5" data-battle-action-form>
                     @csrf
-                    <div class="grid gap-5 lg:grid-cols-2">
+                    <div class="grid gap-4">
                         <fieldset>
                             <legend class="text-sm font-semibold text-white">Атака</legend>
                             <div class="mt-3 grid grid-cols-2 gap-2">

@@ -2,10 +2,11 @@
 
 namespace App\Support;
 
-use App\Models\ArenaSetting;
+use App\Models\Battle;
 use App\Models\BattleEvent;
 use App\Models\BattleParticipant;
 use App\Models\Creature;
+use App\Services\BattleArenaService;
 
 final class BattlePresentation
 {
@@ -15,6 +16,16 @@ final class BattlePresentation
     public static function participant(BattleParticipant $participant): array
     {
         $creature = $participant->creature;
+        $special = $creature?->effectiveSpecialValues() ?? [];
+
+        foreach (($creature?->user?->battleSupportBonus() ?? []) as $attribute => $value) {
+            $special[$attribute] = ($special[$attribute] ?? 0) + $value;
+        }
+
+        $special = app(BattleArenaService::class)->applyEffects(
+            $special,
+            $participant->battle?->arena_effects,
+        );
 
         return [
             'participant_id' => $participant->id,
@@ -25,6 +36,9 @@ final class BattlePresentation
             'side' => $participant->side,
             'image_url' => self::creatureImage($creature),
             'portrait_url' => self::creaturePortrait($creature),
+            'type_name' => $creature?->type?->name,
+            'species_name' => $creature?->species?->name,
+            'special' => $special,
             'spritesheet_image_url' => MediaUrl::resolve($creature?->species?->battle_spritesheet_image),
             'spritesheet_data_url' => MediaUrl::resolve($creature?->species?->battle_spritesheet_data),
             'hp_after' => $participant->hp_after,
@@ -62,10 +76,17 @@ final class BattlePresentation
         ];
     }
 
-    public static function arenaBackground(): string
+    /**
+     * @return array<string, mixed>
+     */
+    public static function arena(Battle $battle): array
     {
-        return MediaUrl::resolve(ArenaSetting::current()->battle_background_image)
-            ?? asset('game-assets/arena/industrial-fantasy-arena.webp');
+        return [
+            'name' => $battle->arena_name ?? 'Стальная цитадель',
+            'background_url' => MediaUrl::resolve($battle->arena_background_image)
+                ?? asset('game-assets/arena/industrial-fantasy-arena.webp'),
+            'effects' => app(BattleArenaService::class)->normalizedEffects($battle->arena_effects),
+        ];
     }
 
     private static function creatureImage(?Creature $creature): string

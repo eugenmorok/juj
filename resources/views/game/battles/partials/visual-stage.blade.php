@@ -8,8 +8,10 @@
         ->sortBy('id')
         ->map(fn (\App\Models\BattleEvent $event): array => \App\Support\BattlePresentation::event($event))
         ->values();
+    $sceneArena = \App\Support\BattlePresentation::arena($battle);
+    $specialLabels = \App\Models\Creature::SPECIAL_LABELS;
     $sceneConfig = [
-        'background_url' => \App\Support\BattlePresentation::arenaBackground(),
+        ...$sceneArena,
         'participants' => $sceneParticipants,
         'events' => $sceneEvents,
     ];
@@ -29,6 +31,48 @@
             <button type="button" data-battle-motion-toggle title="Пауза или продолжение анимации" aria-label="Пауза или продолжение анимации">Ⅱ</button>
             <button type="button" data-battle-animation-skip title="Пропустить текущую анимацию" aria-label="Пропустить текущую анимацию">≫</button>
         </div>
+    </div>
+
+    <div class="battle-visual-stage__arena-badge">
+        <strong>{{ $sceneArena['name'] }}</strong>
+        @if ($sceneArena['effects'] !== [])
+            <span>
+                @foreach ($sceneArena['effects'] as $attribute => $modifier)
+                    {{ $specialLabels[$attribute] ?? strtoupper(substr($attribute, 0, 1)) }}{{ sprintf('%+d', $modifier) }}@if (! $loop->last) · @endif
+                @endforeach
+            </span>
+        @else
+            <span>Без модификаторов</span>
+        @endif
+    </div>
+
+    <div class="battle-visual-stage__hud">
+        @foreach ($sceneParticipants as $index => $participant)
+            <article
+                class="battle-fighter-hud battle-fighter-hud--{{ $index === 0 ? 'left' : 'right' }}"
+                data-battle-fighter-hud="{{ $participant['creature_id'] }}"
+            >
+                <img src="{{ $participant['portrait_url'] }}" alt="">
+                <div class="battle-fighter-hud__body">
+                    <div class="battle-fighter-hud__identity">
+                        <strong>{{ $participant['creature_name'] }}</strong>
+                        <span>ур. {{ $participant['level_before'] }} · {{ $participant['power_score_before'] }} PS</span>
+                    </div>
+                    <div class="battle-fighter-hud__hp">
+                        <span
+                            data-battle-hud-hp-fill
+                            style="width: {{ min(100, max(0, ($participant['hp_after'] / max(1, $participant['hp_before'])) * 100)) }}%"
+                        ></span>
+                        <b data-battle-hud-hp-text>{{ $participant['hp_after'] }}/{{ $participant['hp_before'] }}</b>
+                    </div>
+                    <div class="battle-fighter-hud__special">
+                        @foreach ($participant['special'] as $attribute => $value)
+                            <span title="{{ $attribute }}"><b>{{ $specialLabels[$attribute] ?? strtoupper(substr($attribute, 0, 1)) }}</b>{{ $value }}</span>
+                        @endforeach
+                    </div>
+                </div>
+            </article>
+        @endforeach
     </div>
 
     <div class="battle-visual-stage__viewport" data-battle-canvas>

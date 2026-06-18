@@ -10,6 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'initiator_user_id',
+    'battle_arena_id',
+    'arena_name',
+    'arena_background_image',
+    'arena_effects',
     'winner_creature_id',
     'battle_type',
     'mode',
@@ -44,6 +48,14 @@ class Battle extends Model
     public function initiator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'initiator_user_id');
+    }
+
+    /**
+     * @return BelongsTo<BattleArena, $this>
+     */
+    public function arena(): BelongsTo
+    {
+        return $this->belongsTo(BattleArena::class, 'battle_arena_id');
     }
 
     /**
@@ -114,6 +126,8 @@ class Battle extends Model
     {
         return [
             'initiator_user_id' => 'integer',
+            'battle_arena_id' => 'integer',
+            'arena_effects' => 'array',
             'winner_creature_id' => 'integer',
             'is_draw' => 'boolean',
             'current_round' => 'integer',

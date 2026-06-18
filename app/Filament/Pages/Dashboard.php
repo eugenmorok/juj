@@ -2,6 +2,10 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\ArenaSetting;
+use App\Models\BalanceChangeLog;
+use App\Models\Battle;
+use App\Models\BattleArena;
 use App\Models\Creature;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
@@ -9,9 +13,6 @@ use App\Models\EquipmentSlot;
 use App\Models\Item;
 use App\Models\Skill;
 use App\Models\User;
-use App\Models\ArenaSetting;
-use App\Models\BalanceChangeLog;
-use App\Models\Battle;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
@@ -47,6 +48,7 @@ class Dashboard extends BaseDashboard
                 ['label' => 'Бои', 'value' => Battle::query()->count()],
                 ['label' => 'Активные бои', 'value' => Battle::query()->where('status', Battle::STATUS_RUNNING)->count()],
                 ['label' => 'Настройки баланса', 'value' => ArenaSetting::query()->count()],
+                ['label' => 'Локации арен', 'value' => BattleArena::query()->count()],
                 ['label' => 'Изменения баланса', 'value' => BalanceChangeLog::query()->count()],
             ],
             'links' => [
@@ -59,6 +61,7 @@ class Dashboard extends BaseDashboard
                 ['label' => 'Боты', 'description' => 'Псевдо игроки, генерация сущностей и частота появления.', 'route' => 'filament.admin.resources.bot-profiles.index'],
                 ['label' => 'Бои', 'description' => 'Просмотр участников, статусов, логов и запуск безопасных симуляций без наград.', 'route' => 'filament.admin.resources.battles.index'],
                 ['label' => 'Настройки арены', 'description' => 'Награды, опыт, токены, матчмейкинг, лимиты и экономика инвентаря.', 'route' => 'filament.admin.resources.arena-settings.index'],
+                ['label' => 'Локации арен', 'description' => 'Фоны, активность и симметричные эффекты SPECIAL.', 'route' => 'filament.admin.resources.battle-arenas.index'],
                 ['label' => 'Журнал баланса', 'description' => 'История изменений коэффициентов и лимитов баланса.', 'route' => 'filament.admin.resources.balance-change-logs.index'],
             ],
         ];

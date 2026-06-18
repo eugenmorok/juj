@@ -15,7 +15,7 @@
     @endphp
 
     <div
-        class="space-y-8"
+        class="space-y-5"
         @if ($battle->isInteractive())
             data-battle-poll
             data-battle-id="{{ $battle->id }}"
@@ -61,10 +61,8 @@
             @include('game.battles.partials.participants-grid', ['battle' => $battle])
         </div>
 
-        @include('game.battles.partials.visual-stage', ['battle' => $battle])
-
-        <div class="grid gap-6 xl:grid-cols-[minmax(28rem,0.85fr)_minmax(34rem,1.15fr)]">
-            <div data-battle-action-panel>
+        <div class="battle-workspace">
+            <div class="battle-workspace__tactics" data-battle-action-panel>
                 @include('game.battles.partials.action-panel', [
                     'battle' => $battle,
                     'activeRound' => $activeRound,
@@ -76,7 +74,11 @@
                 ])
             </div>
 
-            <div data-battle-events>
+            <div class="battle-workspace__stage">
+                @include('game.battles.partials.visual-stage', ['battle' => $battle])
+            </div>
+
+            <div class="battle-workspace__log" data-battle-events>
                 @include('game.battles.partials.events-log', ['battle' => $battle])
             </div>
         </div>

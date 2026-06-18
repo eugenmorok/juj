@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         $this->call(EquipmentSlotSeeder::class);
         $this->call(ItemSeeder::class);
         $this->call(StarterBotSeeder::class);
+        $this->call(BattleArenaSeeder::class);
 
         ArenaSetting::query()->firstOrCreate([
             'name' => ArenaSetting::DEFAULT_NAME,

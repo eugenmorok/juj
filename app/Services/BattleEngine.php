@@ -17,6 +17,7 @@ class BattleEngine
 
     public function __construct(
         private readonly PowerScoreService $powerScore,
+        private readonly BattleArenaService $battleArenas,
     ) {}
 
     public function run(
@@ -28,13 +29,15 @@ class BattleEngine
     ): Battle {
         $seed ??= random_int(1, 2_147_483_646);
         $this->rngState = max(1, $seed);
+        $arena = $this->battleArenas->selectForSeed($seed);
 
-        return DB::transaction(function () use ($leftCreature, $rightCreature, $seed, $battleType, $initiator): Battle {
+        return DB::transaction(function () use ($leftCreature, $rightCreature, $seed, $battleType, $initiator, $arena): Battle {
             $leftCreature->loadMissing(['user', 'skills', 'equipmentRows.itemInstance.item']);
             $rightCreature->loadMissing(['user', 'skills', 'equipmentRows.itemInstance.item']);
 
             $battle = Battle::query()->create([
                 'initiator_user_id' => $initiator?->id,
+                ...$this->battleArenas->snapshot($arena),
                 'battle_type' => $battleType,
                 'status' => Battle::STATUS_RUNNING,
                 'is_draw' => false,
@@ -42,8 +45,8 @@ class BattleEngine
                 'started_at' => now(),
             ]);
 
-            $left = $this->combatant($leftCreature, 'challenger');
-            $right = $this->combatant($rightCreature, 'opponent');
+            $left = $this->combatant($leftCreature, 'challenger', $battle->arena_effects);
+            $right = $this->combatant($rightCreature, 'opponent', $battle->arena_effects);
 
             $leftParticipant = $this->participant($battle, $left);
             $rightParticipant = $this->participant($battle, $right);
@@ -52,7 +55,9 @@ class BattleEngine
                 'seed' => $seed,
                 'left_power' => $leftParticipant->power_score_before,
                 'right_power' => $rightParticipant->power_score_before,
-            ], "Бой начинается: {$leftCreature->name} против {$rightCreature->name}. Seed: {$seed}.");
+                'arena_name' => $battle->arena_name,
+                'arena_effects' => $battle->arena_effects,
+            ], "Бой начинается на арене «{$battle->arena_name}»: {$leftCreature->name} против {$rightCreature->name}. Seed: {$seed}.");
 
             for ($round = 1; $round <= self::MAX_ROUNDS; $round++) {
                 $this->event($battle, $round, 'round_started', null, null, [], "Раунд {$round}.");
@@ -121,7 +126,7 @@ class BattleEngine
     /**
      * @return array<string, mixed>
      */
-    private function combatant(Creature $creature, string $side): array
+    private function combatant(Creature $creature, string $side, ?array $arenaEffects = null): array
     {
         $bonuses = $creature->equipmentBonuses();
         $special = $creature->effectiveSpecialValues();
@@ -130,6 +135,7 @@ class BattleEngine
             $special[$attribute] = ($special[$attribute] ?? 0) + $value;
         }
 
+        $special = $this->battleArenas->applyEffects($special, $arenaEffects);
         $maxHp = max(1, 50 + ($special['endurance'] * 10) + ($creature->level * 5) + (int) ($bonuses['hp'] ?? 0));
 
         return [

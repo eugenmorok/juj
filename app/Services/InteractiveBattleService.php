@@ -35,18 +35,21 @@ class InteractiveBattleService
     public function __construct(
         private readonly PowerScoreService $powerScore,
         private readonly BattleRewardService $battleRewards,
+        private readonly BattleArenaService $battleArenas,
     ) {}
 
     public function start(Creature $challengerCreature, Creature $defenderCreature, ?User $initiator = null): Battle
     {
         $seed = random_int(1, 2_147_483_646);
+        $arena = $this->battleArenas->selectForSeed($seed);
 
-        $battle = DB::transaction(function () use ($challengerCreature, $defenderCreature, $initiator, $seed): Battle {
+        $battle = DB::transaction(function () use ($challengerCreature, $defenderCreature, $initiator, $seed, $arena): Battle {
             $challengerCreature = $this->freshCreature($challengerCreature);
             $defenderCreature = $this->freshCreature($defenderCreature);
 
             $battle = Battle::query()->create([
                 'initiator_user_id' => $initiator?->id,
+                ...$this->battleArenas->snapshot($arena),
                 'battle_type' => Battle::TYPE_RANKED,
                 'mode' => Battle::MODE_INTERACTIVE,
                 'status' => Battle::STATUS_RUNNING,
@@ -66,7 +69,9 @@ class InteractiveBattleService
                 'seed' => $seed,
                 'action_seconds' => self::ACTION_SECONDS,
                 'first_actor_creature_id' => $defenderCreature->id,
-            ], "Бой начинается: {$challengerCreature->name} против {$defenderCreature->name}. Первый темп у {$defenderCreature->name}.");
+                'arena_name' => $battle->arena_name,
+                'arena_effects' => $battle->arena_effects,
+            ], "Бой начинается на арене «{$battle->arena_name}»: {$challengerCreature->name} против {$defenderCreature->name}. Первый темп у {$defenderCreature->name}.");
 
             $round = $this->createRound($battle, 1, $defenderCreature->id);
             $this->createBotActions($battle, $round);
@@ -241,8 +246,7 @@ class InteractiveBattleService
         User $viewer,
         bool $includeFragments = false,
         ?int $afterEventId = null,
-    ): array
-    {
+    ): array {
         $snapshot = $this->cachedState($battle);
         $ownParticipant = collect($snapshot['participants'])->firstWhere('user_id', $viewer->id);
         $ownCreatureId = $ownParticipant['creature_id'] ?? null;
@@ -360,7 +364,7 @@ class InteractiveBattleService
 
     private function participant(Battle $battle, Creature $creature, string $side): BattleParticipant
     {
-        $maxHp = $this->battleMaxHp($creature);
+        $maxHp = $this->battleMaxHp($battle, $creature);
 
         return $battle->participants()->create([
             'user_id' => $creature->user_id,
@@ -883,6 +887,8 @@ class InteractiveBattleService
             $values[$attribute] = ($values[$attribute] ?? 0) + $value;
         }
 
+        $values = $this->battleArenas->applyEffects($values, $participant->battle?->arena_effects);
+
         foreach ($roundBonus as $attribute => $value) {
             $values[$attribute] = ($values[$attribute] ?? 0) + $value;
         }
@@ -1042,9 +1048,17 @@ class InteractiveBattleService
         ])->save();
     }
 
-    private function battleMaxHp(Creature $creature): int
+    private function battleMaxHp(Battle $battle, Creature $creature): int
     {
-        return max(1, $creature->effectiveMaxHp() + ($creature->level * 5));
+        $supportEndurance = (int) ($creature->user?->battleSupportBonus()['endurance'] ?? 0);
+        $arenaEndurance = (int) ($battle->arena_effects['endurance'] ?? 0);
+
+        return max(
+            1,
+            $creature->effectiveMaxHp()
+                + ($creature->level * 5)
+                + (($supportEndurance + $arenaEndurance) * 10),
+        );
     }
 
     private function roll(Battle $battle, BattleRound $round, int $creatureId, string $salt, int $min, int $max): int
@@ -1129,9 +1143,7 @@ class InteractiveBattleService
             'latest_message_id' => $latestMessageId ? (int) $latestMessageId : null,
             'events_count' => $eventsCount,
             'messages_count' => $messagesCount,
-            'scene' => [
-                'background_url' => BattlePresentation::arenaBackground(),
-            ],
+            'scene' => BattlePresentation::arena($battle),
             'active_round' => $activeRound ? [
                 'id' => $activeRound->id,
                 'round_number' => $activeRound->round_number,

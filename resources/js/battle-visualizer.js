@@ -69,14 +69,14 @@ class BattleVisualizer {
             atmosphere.label = 'atmosphere';
             this.app.stage.addChild(atmosphere);
 
-            this.effects = new Container();
-            this.app.stage.addChild(this.effects);
-
             await Promise.all(
                 (this.config.participants || []).slice(0, 2).map((participant, index) => (
                     this.createFighter(participant, index)
                 )),
             );
+
+            this.effects = new Container();
+            this.app.stage.addChild(this.effects);
 
             this.layout();
             this.resizeObserver = new ResizeObserver(() => this.layout());
@@ -113,6 +113,9 @@ class BattleVisualizer {
 
         sprite.anchor.set(0.5, 1);
         name.anchor.set(0.5, 1);
+        name.visible = false;
+        hpTrack.visible = false;
+        hpFill.visible = false;
         root.addChild(shadow, sprite, hpTrack, hpFill, name);
         this.app.stage.addChild(root);
 
@@ -129,6 +132,7 @@ class BattleVisualizer {
             baseY: 0,
             currentHp: Number(participant.hp_after ?? participant.hp_before ?? 1),
             maxHp: Math.max(1, Number(participant.hp_before || 1)),
+            displayHeight: 0,
         };
 
         this.fighters.set(Number(participant.creature_id), fighter);
@@ -163,6 +167,7 @@ class BattleVisualizer {
 
             fighter.baseX = width * (fighter.index === 0 ? 0.25 : 0.75);
             fighter.baseY = height * 0.9;
+            fighter.displayHeight = targetHeight;
             fighter.root.position.set(fighter.baseX, fighter.baseY);
             fighter.sprite.scale.set(scale * direction, scale);
             fighter.shadow.scale.set(Math.max(0.75, targetHeight / 380));
@@ -224,6 +229,7 @@ class BattleVisualizer {
             fighter.maxHp = Math.max(1, Number(participant.hp_before ?? fighter.maxHp));
             fighter.result = participant.result;
             this.drawHealth(fighter);
+            this.updateHud(fighter);
         });
 
         this.enqueue(state.events || []);
@@ -283,12 +289,16 @@ class BattleVisualizer {
             actor.root.x = actor.baseX + (direction * 45 * progress);
         });
 
-        this.flash(target, critical ? 0xffc857 : 0xfff4cf, critical ? 0.85 : 0.56);
+        const zone = event.payload?.attack_zone || 'body';
+        const impact = this.zonePosition(target, zone);
+
+        this.hitSprite(target, zone, critical);
         this.floatText(
             target,
             `-${Number(event.payload?.damage || 0)}`,
             critical ? 0xffd451 : 0xfff0cf,
             critical ? 34 : 26,
+            impact,
         );
 
         await Promise.all([
@@ -374,7 +384,82 @@ class BattleVisualizer {
         }).then(() => flash.destroy());
     }
 
-    floatText(fighter, text, color, fontSize) {
+    hitSprite(fighter, zone, critical) {
+        const position = this.zonePosition(fighter, zone);
+        const effect = new Container();
+        const burstColor = critical ? 0xffc341 : 0xffeee0;
+        const burst = new Graphics()
+            .circle(0, 0, critical ? 26 : 19)
+            .fill({ color: burstColor, alpha: critical ? 0.66 : 0.5 })
+            .stroke({ color: 0xffffff, width: critical ? 4 : 3, alpha: 0.9 });
+        const slashA = new Graphics()
+            .roundRect(-4, -30, 8, 60, 4)
+            .fill({ color: critical ? 0xff7a2d : 0xf7f0d4, alpha: 0.96 });
+        const slashB = new Graphics()
+            .roundRect(-3, -22, 6, 44, 3)
+            .fill({ color: 0xffffff, alpha: 0.86 });
+
+        slashA.rotation = 0.82;
+        slashB.rotation = -0.72;
+        effect.addChild(burst, slashA, slashB);
+
+        for (let index = 0; index < (critical ? 9 : 6); index += 1) {
+            const spark = new Graphics()
+                .circle(0, 0, critical ? 3 : 2)
+                .fill({ color: index % 2 === 0 ? burstColor : 0xffffff, alpha: 0.92 });
+            const angle = (Math.PI * 2 * index) / (critical ? 9 : 6);
+            spark.position.set(Math.cos(angle) * 28, Math.sin(angle) * 28);
+            effect.addChild(spark);
+        }
+
+        effect.position.set(position.x, position.y);
+        this.effects.addChild(effect);
+
+        this.tween(300, (progress) => {
+            effect.scale.set(0.55 + progress * 1.25);
+            effect.rotation = progress * 0.22;
+            effect.alpha = 1 - progress;
+        }).then(() => effect.destroy({ children: true }));
+    }
+
+    zonePosition(fighter, zone) {
+        const height = Math.max(120, fighter.displayHeight || 280);
+        const inward = fighter.index === 0 ? 1 : -1;
+        const offsets = {
+            head: { x: inward * height * 0.12, y: -height * 0.8 },
+            body: { x: inward * height * 0.02, y: -height * 0.52 },
+            arms: { x: inward * height * 0.2, y: -height * 0.5 },
+            legs: { x: inward * height * 0.08, y: -height * 0.2 },
+        };
+        const offset = offsets[zone] || offsets.body;
+
+        return {
+            x: fighter.baseX + offset.x,
+            y: fighter.baseY + offset.y,
+        };
+    }
+
+    updateHud(fighter) {
+        const hud = this.element.querySelector(`[data-battle-fighter-hud="${fighter.creature_id}"]`);
+
+        if (!hud) {
+            return;
+        }
+
+        const ratio = Math.max(0, Math.min(1, fighter.currentHp / fighter.maxHp));
+        const fill = hud.querySelector('[data-battle-hud-hp-fill]');
+        const text = hud.querySelector('[data-battle-hud-hp-text]');
+
+        if (fill) {
+            fill.style.width = `${ratio * 100}%`;
+        }
+
+        if (text) {
+            text.textContent = `${fighter.currentHp}/${fighter.maxHp}`;
+        }
+    }
+
+    floatText(fighter, text, color, fontSize, position = null) {
         const label = new Text({
             text,
             style: {
@@ -387,11 +472,12 @@ class BattleVisualizer {
         });
 
         label.anchor.set(0.5);
-        label.position.set(fighter.baseX, fighter.baseY - 150);
+        const origin = position || { x: fighter.baseX, y: fighter.baseY - 150 };
+        label.position.set(origin.x, origin.y - 24);
         this.effects.addChild(label);
 
         this.tween(700, (progress) => {
-            label.y = fighter.baseY - 150 - progress * 72;
+            label.y = origin.y - 24 - progress * 72;
             label.alpha = 1 - Math.max(0, (progress - 0.62) / 0.38);
         }).then(() => label.destroy());
     }
