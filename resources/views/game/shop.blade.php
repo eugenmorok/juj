@@ -1,13 +1,13 @@
-@extends('layouts.app', ['title' => 'Магазин', 'wide' => true])
+@extends('layouts.app', ['title' => 'Магазин'])
 
 @section('content')
     <div class="shop-screen space-y-6">
         <section class="shop-hero">
             <div class="shop-hero__content">
                 <div>
-                    <p class="shop-kicker">Торговая сеть арены</p>
-                    <h1 class="shop-title">Лавка реликвий и механизмов</h1>
-                    <p class="shop-subtitle">Снаряжение из руин, алхимические препараты и редкие механизмы. Витрина меняется, но найденные товары остаются в торговой сети.</p>
+                    <p class="shop-kicker">Экономика</p>
+                    <h1 class="shop-title">Магазин</h1>
+                    <p class="shop-subtitle">Экипировка, расходники и редкие находки торговой сети арены. Новые предметы появляются каждые три часа.</p>
                 </div>
                 <div class="shop-wallet">
                     <div>
@@ -36,8 +36,8 @@
         <section class="shop-panel shop-filters">
             <div class="shop-panel__heading">
                 <div>
-                    <span class="shop-panel__eyebrow">Пульт снабжения</span>
-                    <h2>Поиск по торговым ячейкам</h2>
+                    <span class="shop-panel__eyebrow">Фильтры</span>
+                    <h2>Поиск товаров</h2>
                 </div>
                 <span class="shop-panel__ornament" aria-hidden="true">◆</span>
             </div>
