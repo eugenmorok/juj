@@ -38,10 +38,15 @@ git diff --check
 
 ### Осталось
 
-- Закоммитить только `HANDOFF.md`, `resources/css/app.css` и `resources/views/game/shop.blade.php`.
-- Отправить `main` в GitHub.
-- Выполнить production deploy штатным скриптом.
-- Проверить production `/login` и экран магазина после развёртывания.
+- Основная задача завершена.
+- После будущих изменений магазина повторять визуальную проверку обеих тем и мобильного breakpoint.
+
+### Production
+
+- Изменения интерфейса опубликованы коммитом `0439b5c` (`Align shop design with application themes`).
+- Production обновлён до `0439b5c`; production-сборка Vite и Laravel cache warmup выполнены успешно.
+- `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны.
+- `/login` возвращает HTTP 200, `/shop` для гостя штатно перенаправляет на авторизацию, `merchant-hall.webp` возвращает HTTP 200.
 
 ## Цель
 
