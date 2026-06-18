@@ -13,9 +13,9 @@ class BattleEngine
 {
     private const MAX_ROUNDS = 20;
 
-    private const BOT_DAMAGE_MULTIPLIER = 0.88;
+    private const BOT_DAMAGE_MULTIPLIER = 0.80;
 
-    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.08;
+    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.15;
 
     private int $rngState = 1;
 

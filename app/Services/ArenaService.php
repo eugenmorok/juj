@@ -80,7 +80,7 @@ class ArenaService
         $powerDifference = $settings->matchmaking_power_score_difference > 0
             ? $settings->matchmaking_power_score_difference
             : max(25, (int) ceil($creaturePower * 0.25));
-        $botPowerCeiling = max($creaturePower + 10, (int) ceil($creaturePower * 1.05));
+        $botPowerCeiling = max(1, min($creaturePower - 5, (int) floor($creaturePower * 0.97)));
         $powerCandidates = $matchCandidates
             ->filter(function (Creature $candidate) use ($creaturePower, $powerDifference, $botPowerCeiling): bool {
                 $candidatePower = $this->powerScore->calculate($candidate);

@@ -17,6 +17,14 @@ use Illuminate\Validation\ValidationException;
 
 class BotGenerationService
 {
+    private const BASE_SPECIAL_POINTS = 60;
+
+    private const SPECIAL_POINTS_PER_LEVEL = 8;
+
+    private const ECONOMICAL_BASE_SPECIAL_POINTS = 45;
+
+    private const ECONOMICAL_SPECIAL_POINTS_PER_LEVEL = 6;
+
     /**
      * @return Collection<int, BotProfile>
      */
@@ -200,7 +208,7 @@ class BotGenerationService
             $special[$attribute] = $species->baseSpecialValue($attribute);
         }
 
-        $points = ($style === 'economical' ? 65 : 100) + (($level - 1) * 12);
+        $points = self::specialPointBudget($style, $level);
         $cap = 20 + (($level - 1) * 4);
         $weights = $this->styleWeights($style);
         $attributes = collect($weights)
@@ -222,6 +230,15 @@ class BotGenerationService
         }
 
         return $special;
+    }
+
+    public static function specialPointBudget(string $style, int $level): int
+    {
+        $level = max(1, $level);
+
+        return $style === 'economical'
+            ? self::ECONOMICAL_BASE_SPECIAL_POINTS + (($level - 1) * self::ECONOMICAL_SPECIAL_POINTS_PER_LEVEL)
+            : self::BASE_SPECIAL_POINTS + (($level - 1) * self::SPECIAL_POINTS_PER_LEVEL);
     }
 
     /**

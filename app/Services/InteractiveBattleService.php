@@ -32,9 +32,9 @@ class InteractiveBattleService
 
     private const STATE_CACHE_TTL_SECONDS = 43200;
 
-    private const BOT_DAMAGE_MULTIPLIER = 0.88;
+    private const BOT_DAMAGE_MULTIPLIER = 0.80;
 
-    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.08;
+    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.15;
 
     public function __construct(
         private readonly PowerScoreService $powerScore,

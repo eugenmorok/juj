@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Battle;
 use App\Models\BotProfile;
 use App\Models\Creature;
 use App\Models\CreatureEquipment;
@@ -14,6 +13,7 @@ use App\Models\User;
 use App\Services\ArenaService;
 use App\Services\BotGenerationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class BotManagementTest extends TestCase
@@ -56,6 +56,32 @@ class BotManagementTest extends TestCase
         $this->assertSame(3, User::query()->where('is_bot', true)->count());
         $this->assertSame(3, Creature::query()->count());
         $this->assertGreaterThanOrEqual(1, CreatureEquipment::query()->count());
+    }
+
+    public function test_generated_bot_special_budget_is_lower_than_player_creation_budget(): void
+    {
+        $species = $this->starterCatalog();
+        $profile = BotProfile::query()->create([
+            'display_name' => 'Fair Bot',
+            'style' => 'balanced',
+            'is_active' => true,
+            'min_level' => 1,
+            'max_level' => 1,
+            'spawn_chance' => 65,
+        ]);
+
+        $creature = app(BotGenerationService::class)->generateCreature(
+            $profile,
+            withEquipment: false,
+            withInventory: false,
+            withSkills: false,
+        );
+
+        $this->assertSame(
+            BotGenerationService::specialPointBudget('balanced', 1),
+            $creature->spentCreationPoints($species),
+        );
+        $this->assertLessThan(Creature::CREATION_POINTS, $creature->spentCreationPoints($species));
     }
 
     public function test_admin_can_open_bot_resource_pages(): void
@@ -123,7 +149,7 @@ class BotManagementTest extends TestCase
         ]);
         app(BotGenerationService::class)->generateCreature($botProfile, withEquipment: false);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         app(ArenaService::class)->findOpponent($playerCreature);
     }

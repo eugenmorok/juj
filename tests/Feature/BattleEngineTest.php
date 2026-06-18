@@ -126,8 +126,8 @@ class BattleEngineTest extends TestCase
             ->values()
             ->all();
 
-        $this->assertContains(0.88, $multipliers);
-        $this->assertContains(1.08, $multipliers);
+        $this->assertContains(0.80, $multipliers);
+        $this->assertContains(1.15, $multipliers);
     }
 
     /**
