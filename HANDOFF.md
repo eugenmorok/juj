@@ -101,6 +101,62 @@ git diff --check
 - Все четыре WebP возвращают HTTP 200 и MIME `image/webp`.
 - `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны; `/login` возвращает HTTP 200.
 
+## Изображения инсектов и механоидов — 2026-06-19
+
+### Цель
+
+Дополнить каталог отдельными изображениями всех пяти инсектов и пяти механоидов в общей стилистике стартовых существ.
+
+### Выполненные изменения
+
+- Созданы прозрачные WebP для инсектов:
+  - `insect-war-beetle.webp`;
+  - `insect-mantis-v2.webp`;
+  - `insect-scorpion.webp`;
+  - `insect-fly-swarm.webp`;
+  - `insect-hunter-spider.webp`.
+- Созданы прозрачные WebP для механоидов:
+  - `mechanoid-scout-drone.webp`;
+  - `mechanoid-turret.webp`;
+  - `mechanoid-servobot.webp`;
+  - `mechanoid-combat-module.webp`;
+  - `mechanoid-repair-unit.webp`.
+- `CreatureCatalogSeeder` назначает каждому виду собственные `portrait_image` и `battle_image`.
+- Миграция `2026_06_19_000002_assign_insect_mechanoid_species_images.php` обновляет уже существующий production-каталог.
+- `CreatureCatalogTest` проверяет точные пути всех новых ассетов.
+
+### Важные решения
+
+- Инсекты используют зелёную эмаль и латунные биомеханические детали, механоиды — состаренную бронзу, тёмную сталь и голубую оптику.
+- Каждый силуэт отражает роль и характеристики вида, а не является перекрашенной копией общего шаблона.
+- Исходный `insect-mantis.webp` не перезаписан: новая версия сохранена как `insect-mantis-v2.webp`.
+- Старые общие `insect-mantis.webp` и `mechanoid.webp` оставлены fallback-ассетами.
+
+### Осталось
+
+- Закоммитить, отправить изменения и развернуть их на production.
+
+### Команды проверки
+
+```bash
+vendor/bin/pint --dirty
+php artisan test --filter=CreatureCatalogTest
+php artisan test
+npm run build
+git diff --check
+```
+
+### Результаты проверки
+
+- `vendor/bin/pint --dirty` — успешно.
+- `php artisan test --filter=CreatureCatalogTest` — 3 теста, 37 assertions, успешно.
+- `php artisan test` — 125 тестов, 773 assertions, успешно.
+- `npm run build` — успешно.
+- `git diff --check` — успешно.
+- Все десять новых файлов имеют размер 1536×1024, режим RGBA и альфа-канал.
+- В Browser подтверждена загрузка всех изображений с правильными URL и натуральным размером 1536×1024.
+- В светлой и тёмной темах силуэты, тонкие конечности, антенны и полупрозрачные крылья отображаются корректно.
+
 - Точечные тесты баланса и матчмейкинга: 23 теста, 136 assertions — успешно.
 - Полный набор до финального handoff: 125 тестов, 759 assertions — успешно.
 - Миграция проверена на локальной базе с существующими ботами.

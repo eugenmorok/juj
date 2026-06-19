@@ -40,6 +40,16 @@ class CreatureCatalogTest extends TestCase
             'boar' => 'game-assets/creatures/animal-boar.webp',
             'lynx' => 'game-assets/creatures/animal-lynx.webp',
             'mutant-rat' => 'game-assets/creatures/animal-mutant-rat.webp',
+            'war-beetle' => 'game-assets/creatures/insect-war-beetle.webp',
+            'mantis' => 'game-assets/creatures/insect-mantis-v2.webp',
+            'scorpion' => 'game-assets/creatures/insect-scorpion.webp',
+            'fly-swarm' => 'game-assets/creatures/insect-fly-swarm.webp',
+            'hunter-spider' => 'game-assets/creatures/insect-hunter-spider.webp',
+            'scout-drone' => 'game-assets/creatures/mechanoid-scout-drone.webp',
+            'turret' => 'game-assets/creatures/mechanoid-turret.webp',
+            'servobot' => 'game-assets/creatures/mechanoid-servobot.webp',
+            'combat-module' => 'game-assets/creatures/mechanoid-combat-module.webp',
+            'repair-unit' => 'game-assets/creatures/mechanoid-repair-unit.webp',
         ] as $code => $image) {
             $this->assertDatabaseHas('creature_species', [
                 'code' => $code,
