@@ -62,6 +62,25 @@ class Item extends Model
         'service' => 'Услуга',
     ];
 
+    public const BONUS_LABELS = [
+        'strength' => 'Сила',
+        'perception' => 'Восприятие',
+        'endurance' => 'Выносливость',
+        'charisma' => 'Харизма',
+        'intelligence' => 'Интеллект',
+        'agility' => 'Ловкость',
+        'luck' => 'Удача',
+        'damage' => 'Урон',
+        'armor' => 'Броня',
+        'hp' => 'Макс. HP',
+        'max_hp' => 'Макс. HP',
+        'hp_max' => 'Макс. HP',
+        'heal' => 'Лечение',
+        'hp_restore' => 'Лечение',
+        'crit_chance' => 'Шанс крита',
+        'poison_damage' => 'Урон ядом',
+    ];
+
     /**
      * @return BelongsTo<EquipmentSlot, $this>
      */
@@ -136,6 +155,11 @@ class Item extends Model
     public function canBePurchasedBy(User $user): bool
     {
         return $this->is_active && $user->level >= $this->required_level;
+    }
+
+    public static function bonusLabel(string $bonus): string
+    {
+        return self::BONUS_LABELS[$bonus] ?? str_replace('_', ' ', $bonus);
     }
 
     #[Scope]

@@ -105,6 +105,13 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    public function botStrengthPercent(): int
+    {
+        return $this->is_bot
+            ? min(150, max(50, (int) ($this->botProfile?->strength_percent ?? 100)))
+            : 100;
+    }
+
     public function canCreateCreature(): bool
     {
         return $this->creature_creation_points >= self::CREATURE_CREATION_COST;

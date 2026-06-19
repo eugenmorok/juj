@@ -108,13 +108,19 @@
                                 Стартовый cap {{ \App\Models\Creature::STARTER_SPECIAL_CAP }}
                             </span>
                         </div>
+                        <p class="mt-2 text-sm text-zinc-400">
+                            Тип и вид дают неснижаемую базу SPECIAL. Доступные 100 очков расходуются только на значения сверх базы и стартовые навыки.
+                        </p>
 
                         <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             @foreach (\App\Models\Creature::SPECIAL_LABELS as $attribute => $label)
                                 <label class="rounded-md border border-zinc-800 bg-zinc-950 p-3">
                                     <span class="flex items-center justify-between gap-3">
                                         <span class="font-semibold text-white">{{ $label }}</span>
-                                        <span class="text-xs text-zinc-400">База <span data-base-value="{{ $attribute }}">0</span></span>
+                                        <span class="text-xs text-zinc-400">
+                                            База <span data-base-value="{{ $attribute }}">0</span>
+                                            · вложено <span data-invested-value="{{ $attribute }}">0</span>
+                                        </span>
                                     </span>
                                     <input
                                         type="number"
@@ -311,7 +317,9 @@
 
                 if (speciesData) {
                     Object.entries(speciesData.base).forEach(([attribute, baseValue]) => {
-                        statsCost += Math.max(0, (values[attribute] || 0) - baseValue);
+                        const invested = Math.max(0, (values[attribute] || 0) - baseValue);
+                        statsCost += invested;
+                        root.querySelector(`[data-invested-value="${attribute}"]`).textContent = invested;
                     });
                 }
 
@@ -356,7 +364,17 @@
                 applySpeciesBase();
                 updateSummary();
             });
-            specialInputs.forEach((input) => input.addEventListener('input', updateSummary));
+            specialInputs.forEach((input) => input.addEventListener('input', () => {
+                const speciesData = selectedSpecies();
+                const attribute = input.dataset.specialInput;
+                const baseValue = speciesData?.base?.[attribute] || 1;
+
+                if (Number(input.value || 0) < baseValue) {
+                    input.value = baseValue;
+                }
+
+                updateSummary();
+            }));
             skillCheckboxes.forEach((input) => input.addEventListener('change', updateSummary));
 
             updateSpeciesOptions();

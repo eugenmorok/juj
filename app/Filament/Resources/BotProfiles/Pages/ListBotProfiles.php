@@ -48,12 +48,21 @@ class ListBotProfiles extends ListRecords
                         ->minValue(1)
                         ->default(3)
                         ->required(),
+                    TextInput::make('strength_percent')
+                        ->label('Сила в бою, %')
+                        ->numeric()
+                        ->integer()
+                        ->minValue(50)
+                        ->maxValue(150)
+                        ->default(100)
+                        ->required(),
                 ])
                 ->action(fn (array $data): mixed => app(BotGenerationService::class)->generateBatch(
                     count: (int) $data['count'],
                     style: $data['style'],
                     minLevel: (int) $data['min_level'],
                     maxLevel: (int) $data['max_level'],
+                    strengthPercent: (int) $data['strength_percent'],
                     withCreature: true,
                     withEquipment: true,
                 ))

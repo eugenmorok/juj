@@ -186,15 +186,7 @@
                                     </div>
                                 </dl>
 
-                                @if ($item->bonuses)
-                                    <div class="shop-bonuses">
-                                        @foreach ($item->bonuses as $bonus => $value)
-                                            <span>
-                                                {{ $bonus }} {{ (int) $value > 0 ? '+' : '' }}{{ $value }}
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @endif
+                                <x-item-effects :item="$item" :show-duration="false" class="shop-bonuses" />
 
                                 @if (! $available)
                                     <p class="mt-4 text-sm text-amber-200">Недоступно по уровню игрока.</p>

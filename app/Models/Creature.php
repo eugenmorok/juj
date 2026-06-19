@@ -168,17 +168,26 @@ class Creature extends Model
     public function effectiveSpecialValues(): array
     {
         $bonuses = $this->equipmentBonuses();
+        $strengthPercent = $this->user?->botStrengthPercent() ?? 100;
 
         return collect(self::SPECIAL_ATTRIBUTES)
             ->mapWithKeys(fn (string $attribute): array => [
-                $attribute => (int) $this->{$attribute} + (int) ($bonuses[$attribute] ?? 0),
+                $attribute => max(1, (int) round(
+                    ((int) $this->{$attribute} + (int) ($bonuses[$attribute] ?? 0))
+                    * $strengthPercent
+                    / 100
+                )),
             ])
             ->all();
     }
 
     public function effectiveMaxHp(): int
     {
-        return $this->max_hp + (int) ($this->equipmentBonuses()['hp'] ?? 0);
+        return max(1, (int) round(
+            ($this->max_hp + (int) ($this->equipmentBonuses()['hp'] ?? 0))
+            * ($this->user?->botStrengthPercent() ?? 100)
+            / 100
+        ));
     }
 
     public function spentCreationPoints(CreatureSpecies $species): int

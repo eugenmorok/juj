@@ -38,6 +38,16 @@ class BotProfileForm
                             ->maxValue(100)
                             ->default(100)
                             ->required(),
+                        TextInput::make('strength_percent')
+                            ->label('Сила в бою, %')
+                            ->helperText('100% — базовый баланс. Влияет на SPECIAL, HP и подбор соперника без перегенерации.')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(50)
+                            ->maxValue(150)
+                            ->default(100)
+                            ->suffix('%')
+                            ->required(),
                     ])
                     ->columns(2),
                 Section::make('Генерация')

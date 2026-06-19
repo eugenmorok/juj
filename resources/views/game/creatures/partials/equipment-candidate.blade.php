@@ -28,6 +28,8 @@
         <p class="mt-2 text-sm text-zinc-400">{{ $item->description }}</p>
     @endif
 
+    <x-item-effects :item="$item" />
+
     @if (! $item->isEquipment())
         <p class="mt-3 text-xs text-zinc-500">Не является экипировкой.</p>
     @elseif (! $item->canBeUsedBy($creature))

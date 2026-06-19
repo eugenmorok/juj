@@ -26,6 +26,7 @@ class BotProfileFactory extends Factory
             'min_level' => 1,
             'max_level' => 3,
             'spawn_chance' => 100,
+            'strength_percent' => 100,
             'generated_creatures_count' => 0,
             'last_generated_at' => null,
             'notes' => null,

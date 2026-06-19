@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
     'min_level',
     'max_level',
     'spawn_chance',
+    'strength_percent',
     'generated_creatures_count',
     'last_generated_at',
     'notes',
@@ -36,6 +37,11 @@ class BotProfile extends Model
         'random' => 'Случайный',
         'economical' => 'Экономный',
     ];
+
+    public function strengthMultiplier(): float
+    {
+        return min(150, max(50, (int) $this->strength_percent)) / 100;
+    }
 
     /**
      * @return BelongsTo<User, $this>
@@ -97,6 +103,7 @@ class BotProfile extends Model
             'min_level' => 'integer',
             'max_level' => 'integer',
             'spawn_chance' => 'integer',
+            'strength_percent' => 'integer',
             'generated_creatures_count' => 'integer',
             'last_generated_at' => 'datetime',
         ];

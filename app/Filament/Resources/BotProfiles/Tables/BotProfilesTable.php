@@ -40,6 +40,10 @@ class BotProfilesTable
                     ->label('Появление')
                     ->suffix('%')
                     ->sortable(),
+                TextColumn::make('strength_percent')
+                    ->label('Сила')
+                    ->suffix('%')
+                    ->sortable(),
                 TextColumn::make('min_level')
                     ->label('Мин.')
                     ->sortable(),

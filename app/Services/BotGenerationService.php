@@ -39,14 +39,17 @@ class BotGenerationService
         bool $withSkills = true,
         bool $loadCreatures = true,
         bool $reloadProfiles = true,
+        int $strengthPercent = 100,
     ): Collection {
         $count = min(50, max(1, $count));
         $minLevel = max(1, $minLevel);
         $maxLevel = max($minLevel, $maxLevel);
 
-        return DB::transaction(function () use ($count, $style, $minLevel, $maxLevel, $withCreature, $withEquipment, $withInventory, $withSkills, $loadCreatures, $reloadProfiles): Collection {
+        $strengthPercent = min(150, max(50, $strengthPercent));
+
+        return DB::transaction(function () use ($count, $style, $minLevel, $maxLevel, $withCreature, $withEquipment, $withInventory, $withSkills, $loadCreatures, $reloadProfiles, $strengthPercent): Collection {
             return collect(range(1, $count))
-                ->map(function (int $index) use ($style, $minLevel, $maxLevel, $withCreature, $withEquipment, $withInventory, $withSkills, $loadCreatures, $reloadProfiles): BotProfile {
+                ->map(function (int $index) use ($style, $minLevel, $maxLevel, $withCreature, $withEquipment, $withInventory, $withSkills, $loadCreatures, $reloadProfiles, $strengthPercent): BotProfile {
                     $profile = BotProfile::query()->create([
                         'display_name' => $this->botName($style, $index),
                         'style' => array_key_exists($style, BotProfile::STYLES) ? $style : 'balanced',
@@ -54,6 +57,7 @@ class BotGenerationService
                         'min_level' => $minLevel,
                         'max_level' => $maxLevel,
                         'spawn_chance' => 65,
+                        'strength_percent' => $strengthPercent,
                     ]);
 
                     if ($withCreature) {

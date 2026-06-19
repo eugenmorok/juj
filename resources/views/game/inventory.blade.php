@@ -121,6 +121,8 @@
                                     <p class="mt-3 text-sm text-zinc-400">{{ $item->description }}</p>
                                 @endif
 
+                                <x-item-effects :item="$item" />
+
                                 @include('game.inventory.partials.use-consumable-form', [
                                     'inventoryItem' => $inventoryItem,
                                     'creatures' => $creatures,
@@ -255,6 +257,8 @@
                                                         </form>
                                                     </div>
                                                 </div>
+
+                                                <x-item-effects :item="$item" />
                                             </article>
                                         @endforeach
                                     </div>
