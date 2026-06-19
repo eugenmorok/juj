@@ -34,6 +34,19 @@ class CreatureCatalogTest extends TestCase
                 'is_starter_available' => true,
             ]);
         }
+
+        foreach ([
+            'bear' => 'game-assets/creatures/animal-bear.webp',
+            'boar' => 'game-assets/creatures/animal-boar.webp',
+            'lynx' => 'game-assets/creatures/animal-lynx.webp',
+            'mutant-rat' => 'game-assets/creatures/animal-mutant-rat.webp',
+        ] as $code => $image) {
+            $this->assertDatabaseHas('creature_species', [
+                'code' => $code,
+                'portrait_image' => $image,
+                'battle_image' => $image,
+            ]);
+        }
     }
 
     public function test_player_entities_page_shows_only_active_types_and_species(): void
