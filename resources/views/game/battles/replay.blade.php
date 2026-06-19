@@ -106,6 +106,12 @@
                                             <div class="rounded-md border border-zinc-800 px-3 py-2">
                                                 <dt class="text-xs text-zinc-500">Предмет</dt>
                                                 <dd class="mt-1 text-sm text-zinc-100">{{ $item?->name ?? '-' }}</dd>
+                                                @if ($item)
+                                                    @if ($item->description)
+                                                        <p class="mt-1 text-xs text-zinc-400">{{ $item->description }}</p>
+                                                    @endif
+                                                    <x-item-effects :item="$item" :show-duration="false" />
+                                                @endif
                                             </div>
                                         </dl>
                                     @else

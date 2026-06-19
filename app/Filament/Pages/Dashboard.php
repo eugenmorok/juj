@@ -60,7 +60,7 @@ class Dashboard extends BaseDashboard
                 ['label' => 'Предметы', 'description' => 'Редкость, цена, бонусы, ограничения и слоты предметов.', 'route' => 'filament.admin.resources.items.index'],
                 ['label' => 'Боты', 'description' => 'Псевдо игроки, генерация сущностей и частота появления.', 'route' => 'filament.admin.resources.bot-profiles.index'],
                 ['label' => 'Бои', 'description' => 'Просмотр участников, статусов, логов и запуск безопасных симуляций без наград.', 'route' => 'filament.admin.resources.battles.index'],
-                ['label' => 'Настройки арены', 'description' => 'Награды, опыт, токены, матчмейкинг, лимиты и экономика инвентаря.', 'route' => 'filament.admin.resources.arena-settings.index'],
+                ['label' => 'Настройки арены', 'description' => 'Награды, матчмейкинг, экономика и отдельные регуляторы силы ботов в PvE.', 'route' => 'filament.admin.resources.arena-settings.index'],
                 ['label' => 'Локации арен', 'description' => 'Фоны, активность и симметричные эффекты SPECIAL.', 'route' => 'filament.admin.resources.battle-arenas.index'],
                 ['label' => 'Журнал баланса', 'description' => 'История изменений коэффициентов и лимитов баланса.', 'route' => 'filament.admin.resources.balance-change-logs.index'],
             ],

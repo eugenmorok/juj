@@ -230,6 +230,38 @@ class InventoryManagementTest extends TestCase
             ->assertSee('Продать за');
     }
 
+    public function test_item_interfaces_show_description_bonuses_and_duration(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user, ['name' => 'Effect Reader']);
+        $item = Item::factory()->potion()->create([
+            'name' => 'Тактическая сыворотка',
+            'description' => 'Восстанавливает бойца и ускоряет реакцию.',
+            'bonuses' => ['heal' => 25, 'agility' => 2],
+            'duration_type' => 'consumable',
+            'uses_count' => 3,
+        ]);
+        $user->ensureInventory()->addItemInstance(ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+            'durability' => 3,
+        ]));
+
+        foreach ([route('inventory'), route('entities.show', $creature)] as $url) {
+            $this->actingAs($user)
+                ->get($url)
+                ->assertOk()
+                ->assertSeeText('Тактическая сыворотка')
+                ->assertSeeText('Восстанавливает бойца и ускоряет реакцию.')
+                ->assertSeeText('Лечение')
+                ->assertSeeText('+25')
+                ->assertSeeText('Ловкость')
+                ->assertSeeText('+2')
+                ->assertSeeText('Расходуется')
+                ->assertSeeText('3 исп.');
+        }
+    }
+
     public function test_inventory_page_filters_items_by_catalog_fields_and_location(): void
     {
         $user = User::factory()->create();

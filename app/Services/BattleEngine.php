@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ArenaSetting;
 use App\Models\Battle;
 use App\Models\BattleEvent;
 use App\Models\BattleParticipant;
@@ -13,11 +14,9 @@ class BattleEngine
 {
     private const MAX_ROUNDS = 20;
 
-    private const BOT_DAMAGE_MULTIPLIER = 0.80;
-
-    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.15;
-
     private int $rngState = 1;
+
+    private ?ArenaSetting $settings = null;
 
     public function __construct(
         private readonly PowerScoreService $powerScore,
@@ -33,6 +32,7 @@ class BattleEngine
     ): Battle {
         $seed ??= random_int(1, 2_147_483_646);
         $this->rngState = max(1, $seed);
+        $this->settings = ArenaSetting::current();
         $arena = $this->battleArenas->selectForSeed($seed);
 
         return DB::transaction(function () use ($leftCreature, $rightCreature, $seed, $battleType, $initiator, $arena): Battle {
@@ -133,7 +133,7 @@ class BattleEngine
     private function combatant(Creature $creature, string $side, ?array $arenaEffects = null): array
     {
         $bonuses = $creature->equipmentBonuses();
-        $special = $creature->effectiveSpecialValues();
+        $special = $creature->effectiveSpecialValues($this->settings);
 
         foreach (($creature->user?->battleSupportBonus() ?? []) as $attribute => $value) {
             $special[$attribute] = ($special[$attribute] ?? 0) + $value;
@@ -166,7 +166,7 @@ class BattleEngine
             'creature_id' => $creature->id,
             'is_bot' => (bool) $creature->user?->is_bot,
             'side' => $combatant['side'],
-            'power_score_before' => $this->powerScore->calculate($creature),
+            'power_score_before' => $this->powerScore->calculate($creature, $this->settings),
             'hp_before' => $combatant['max_hp'],
             'hp_after' => $combatant['hp'],
             'level_before' => $creature->level,
@@ -284,9 +284,10 @@ class BattleEngine
     {
         $attackerIsBot = (bool) $attacker['creature']->user?->is_bot;
         $defenderIsBot = (bool) $defender['creature']->user?->is_bot;
+        $settings = $this->settings ?? ArenaSetting::current();
         $multiplier = match (true) {
-            $attackerIsBot && ! $defenderIsBot => self::BOT_DAMAGE_MULTIPLIER,
-            ! $attackerIsBot && $defenderIsBot => self::PLAYER_VS_BOT_DAMAGE_MULTIPLIER,
+            $attackerIsBot && ! $defenderIsBot => $settings->botDamageMultiplier(),
+            ! $attackerIsBot && $defenderIsBot => $settings->playerVsBotDamageMultiplier(),
             default => 1.0,
         };
 

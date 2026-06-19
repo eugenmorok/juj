@@ -162,6 +162,47 @@ class Item extends Model
         return self::BONUS_LABELS[$bonus] ?? str_replace('_', ' ', $bonus);
     }
 
+    /**
+     * @return list<string>
+     */
+    public function bonusSummaries(): array
+    {
+        return collect($this->bonuses ?? [])
+            ->filter(fn (mixed $value): bool => is_numeric($value) && (float) $value !== 0.0)
+            ->map(function (mixed $value, string $bonus): string {
+                $sign = (float) $value > 0 ? '+' : '';
+                $suffix = str_contains($bonus, 'chance') ? '%' : '';
+
+                return self::bonusLabel($bonus).' '.$sign.$value.$suffix;
+            })
+            ->values()
+            ->all();
+    }
+
+    public function durationSummary(): ?string
+    {
+        if (! $this->duration_type) {
+            return null;
+        }
+
+        $summary = self::DURATIONS[$this->duration_type] ?? $this->duration_type;
+
+        return $this->isConsumable()
+            ? $summary.' · '.$this->initialUses().' исп.'
+            : $summary;
+    }
+
+    public function effectSummary(bool $showDuration = true): string
+    {
+        $parts = $this->bonusSummaries();
+
+        if ($showDuration && $duration = $this->durationSummary()) {
+            $parts[] = $duration;
+        }
+
+        return implode(' · ', $parts);
+    }
+
     #[Scope]
     protected function active(Builder $query): void
     {

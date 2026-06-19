@@ -165,10 +165,10 @@ class Creature extends Model
     /**
      * @return array<string, int>
      */
-    public function effectiveSpecialValues(): array
+    public function effectiveSpecialValues(?ArenaSetting $settings = null): array
     {
         $bonuses = $this->equipmentBonuses();
-        $strengthPercent = $this->user?->botStrengthPercent() ?? 100;
+        $strengthPercent = $this->user?->botStrengthPercent($settings) ?? 100;
 
         return collect(self::SPECIAL_ATTRIBUTES)
             ->mapWithKeys(fn (string $attribute): array => [
@@ -181,11 +181,11 @@ class Creature extends Model
             ->all();
     }
 
-    public function effectiveMaxHp(): int
+    public function effectiveMaxHp(?ArenaSetting $settings = null): int
     {
         return max(1, (int) round(
             ($this->max_hp + (int) ($this->equipmentBonuses()['hp'] ?? 0))
-            * ($this->user?->botStrengthPercent() ?? 100)
+            * ($this->user?->botStrengthPercent($settings) ?? 100)
             / 100
         ));
     }

@@ -100,6 +100,10 @@
                                     <p class="mt-1 text-xs text-zinc-500">
                                         {{ $equipmentRows->pluck('slot.name')->filter()->implode(', ') }}
                                     </p>
+                                    @if ($item->description)
+                                        <p class="mt-2 text-sm text-zinc-400">{{ $item->description }}</p>
+                                    @endif
+                                    <x-item-effects :item="$item" />
                                 </div>
                                 <form method="POST" action="{{ route('entities.equipment.unequip', [$creature, $itemInstance]) }}">
                                     @csrf
@@ -159,6 +163,10 @@
                                                     <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
                                                 @endif
                                             </div>
+                                            @if ($item->description)
+                                                <p class="mt-2 text-sm text-zinc-400">{{ $item->description }}</p>
+                                            @endif
+                                            <x-item-effects :item="$item" />
                                         </div>
                                         <div class="flex flex-wrap gap-2">
                                             @include('game.inventory.partials.use-consumable-form', [
@@ -222,6 +230,10 @@
                                                     <span class="text-xs text-emerald-300">Заряды: {{ $inventoryItem->itemInstance->remainingUses() }}</span>
                                                 @endif
                                             </div>
+                                            @if ($item->description)
+                                                <p class="mt-2 text-sm text-zinc-400">{{ $item->description }}</p>
+                                            @endif
+                                            <x-item-effects :item="$item" />
                                         </div>
                                         <div class="flex flex-wrap gap-2">
                                             @include('game.inventory.partials.use-consumable-form', [

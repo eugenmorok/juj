@@ -37,6 +37,14 @@ class ArenaSettingsTable
                 TextColumn::make('matchmaking_power_score_difference')
                     ->label('Разница power')
                     ->sortable(),
+                TextColumn::make('bot_global_strength_percent')
+                    ->label('Сила ботов')
+                    ->suffix('%')
+                    ->sortable(),
+                TextColumn::make('bot_damage_percent')
+                    ->label('Урон ботов')
+                    ->suffix('%')
+                    ->toggleable(),
                 TextColumn::make('daily_battle_limit')
                     ->label('Лимит боев')
                     ->formatStateUsing(fn (int $state): string => $state === 0 ? 'Без лимита' : (string) $state)

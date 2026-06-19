@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ArenaSetting;
 use App\Models\Creature;
 use App\Models\CreatureEquipment;
 use App\Models\CreatureSpecies;
@@ -99,6 +100,10 @@ class BattleEngineTest extends TestCase
 
     public function test_automatic_pve_battle_applies_player_and_bot_damage_multipliers(): void
     {
+        ArenaSetting::factory()->create([
+            'bot_damage_percent' => 70,
+            'player_vs_bot_damage_percent' => 130,
+        ]);
         $player = User::factory()->create();
         $bot = User::factory()->create(['is_bot' => true]);
         $playerCreature = $this->creatureFor($player, [
@@ -126,8 +131,8 @@ class BattleEngineTest extends TestCase
             ->values()
             ->all();
 
-        $this->assertContains(0.80, $multipliers);
-        $this->assertContains(1.15, $multipliers);
+        $this->assertContains(0.70, $multipliers);
+        $this->assertContains(1.30, $multipliers);
     }
 
     /**

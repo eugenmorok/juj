@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ArenaChallenge;
+use App\Models\ArenaSetting;
 use App\Models\Battle;
 use App\Models\BattleAction;
 use App\Models\BattleMessage;
@@ -65,6 +66,28 @@ class TurnBasedArenaBattleTest extends TestCase
         ]);
         $this->assertSame(2, BattleAction::query()->where('battle_round_id', BattleRound::query()->where('battle_id', $battle->id)->where('round_number', 1)->value('id'))->count());
         $this->assertTrue($battle->events()->whereIn('event_type', ['interactive_hit', 'interactive_miss', 'interactive_critical_hit'])->exists());
+    }
+
+    public function test_global_bot_strength_changes_interactive_battle_hp_without_regeneration(): void
+    {
+        ArenaSetting::factory()->create([
+            'bot_global_strength_percent' => 120,
+        ]);
+        [$type, $species] = $this->catalog();
+        $user = User::factory()->create();
+        $botProfile = BotProfile::factory()->create([
+            'strength_percent' => 100,
+        ]);
+        $creature = $this->creatureFor($user, $type, $species, ['name' => 'Player']);
+        $botCreature = $this->creatureFor($botProfile->user, $type, $species, ['name' => 'Scaled Bot']);
+
+        $battle = app(InteractiveBattleService::class)->start($creature, $botCreature, $user);
+        $playerParticipant = $battle->participants->firstWhere('creature_id', $creature->id);
+        $botParticipant = $battle->participants->firstWhere('creature_id', $botCreature->id);
+
+        $this->assertSame($creature->max_hp + 5, $playerParticipant->hp_before);
+        $this->assertSame((int) round($botCreature->max_hp * 1.2) + 5, $botParticipant->hp_before);
+        $this->assertGreaterThan($playerParticipant->power_score_before, $botParticipant->power_score_before);
     }
 
     public function test_interactive_battle_page_uses_readable_russian_text(): void
@@ -233,6 +256,7 @@ class TurnBasedArenaBattleTest extends TestCase
 
         $item = Item::factory()->potion()->create([
             'name' => 'Battle Tonic',
+            'description' => 'Restores health and temporarily increases strength.',
             'bonuses' => ['heal' => 25, 'strength' => 3],
             'uses_count' => 1,
         ]);
@@ -243,6 +267,16 @@ class TurnBasedArenaBattleTest extends TestCase
             'state' => 'stored',
         ]);
         $inventoryItem = Inventory::forUser($user)->addItemInstance($itemInstance);
+
+        $this->actingAs($user)
+            ->get(route('arena.battles.show', $battle))
+            ->assertOk()
+            ->assertSeeText('Battle Tonic')
+            ->assertSeeText('Restores health and temporarily increases strength.')
+            ->assertSeeText('Лечение')
+            ->assertSeeText('+25')
+            ->assertSeeText('Сила')
+            ->assertSeeText('+3');
 
         $this->actingAs($user)
             ->post(route('arena.battles.actions.store', $battle), [

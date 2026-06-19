@@ -114,6 +114,7 @@
 
                         <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             @foreach (\App\Models\Creature::SPECIAL_LABELS as $attribute => $label)
+                                @php($baseValue = (int) ($selectedSpecies['base'][$attribute] ?? 1))
                                 <label class="rounded-md border border-zinc-800 bg-zinc-950 p-3">
                                     <span class="flex items-center justify-between gap-3">
                                         <span class="font-semibold text-white">{{ $label }}</span>
@@ -125,9 +126,9 @@
                                     <input
                                         type="number"
                                         name="{{ $attribute }}"
-                                        value="{{ old($attribute, 1) }}"
+                                        value="{{ old($attribute, $baseValue) }}"
                                         data-special-input="{{ $attribute }}"
-                                        min="1"
+                                        min="{{ $baseValue }}"
                                         max="{{ \App\Models\Creature::STARTER_SPECIAL_CAP }}"
                                         class="mt-3 w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-white"
                                         required
@@ -274,7 +275,7 @@
                 return Object.entries(skill.requirements || {}).every(([attribute, required]) => values[attribute] >= required);
             };
 
-            const applySpeciesBase = () => {
+            const applySpeciesBase = (resetValues = false) => {
                 const speciesData = selectedSpecies();
 
                 if (!speciesData) {
@@ -286,13 +287,15 @@
                     const baseValue = speciesData.base[attribute] || 1;
 
                     input.min = baseValue;
-                    input.value = Math.max(Number(input.value || baseValue), baseValue);
+                    input.value = resetValues
+                        ? baseValue
+                        : Math.max(Number(input.value || baseValue), baseValue);
                     root.querySelector(`[data-base-value="${attribute}"]`).textContent = baseValue;
                     root.querySelector(`[data-base-summary="${attribute}"]`).textContent = baseValue;
                 });
             };
 
-            const updateSpeciesOptions = () => {
+            const updateSpeciesOptions = (resetValues = false) => {
                 const selectedTypeId = Number(typeSelect.value);
                 const visibleOptions = [...speciesSelect.options].filter((option) => Number(option.dataset.typeId) === selectedTypeId);
 
@@ -304,7 +307,7 @@
                     speciesSelect.value = visibleOptions[0].value;
                 }
 
-                applySpeciesBase();
+                applySpeciesBase(resetValues);
                 updateSummary();
             };
 
@@ -359,9 +362,9 @@
                 }
             };
 
-            typeSelect?.addEventListener('change', updateSpeciesOptions);
+            typeSelect?.addEventListener('change', () => updateSpeciesOptions(true));
             speciesSelect?.addEventListener('change', () => {
-                applySpeciesBase();
+                applySpeciesBase(true);
                 updateSummary();
             });
             specialInputs.forEach((input) => input.addEventListener('input', () => {

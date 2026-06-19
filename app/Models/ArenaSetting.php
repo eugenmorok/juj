@@ -37,6 +37,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'minimum_reward_multiplier',
     'matchmaking_level_difference',
     'matchmaking_power_score_difference',
+    'bot_global_strength_percent',
+    'bot_damage_percent',
+    'player_vs_bot_damage_percent',
+    'bot_matchmaking_max_power_percent',
+    'bot_matchmaking_power_gap',
     'power_score_level_weight',
     'power_score_skill_weight',
     'power_score_equipment_weight',
@@ -79,6 +84,11 @@ class ArenaSetting extends Model
         'minimum_reward_multiplier',
         'matchmaking_level_difference',
         'matchmaking_power_score_difference',
+        'bot_global_strength_percent',
+        'bot_damage_percent',
+        'player_vs_bot_damage_percent',
+        'bot_matchmaking_max_power_percent',
+        'bot_matchmaking_power_gap',
         'power_score_level_weight',
         'power_score_skill_weight',
         'power_score_equipment_weight',
@@ -119,6 +129,11 @@ class ArenaSetting extends Model
             'minimum_reward_multiplier' => 0.1,
             'matchmaking_level_difference' => 2,
             'matchmaking_power_score_difference' => 0,
+            'bot_global_strength_percent' => 100,
+            'bot_damage_percent' => 80,
+            'player_vs_bot_damage_percent' => 115,
+            'bot_matchmaking_max_power_percent' => 97,
+            'bot_matchmaking_power_gap' => 5,
             'power_score_level_weight' => 10,
             'power_score_skill_weight' => 1,
             'power_score_equipment_weight' => 1,
@@ -141,6 +156,36 @@ class ArenaSetting extends Model
         }
 
         return self::query()->create(self::defaults());
+    }
+
+    public function botGlobalStrengthPercent(): int
+    {
+        return min(150, max(50, (int) $this->bot_global_strength_percent));
+    }
+
+    public function botDamageMultiplier(): float
+    {
+        return min(200, max(25, (int) $this->bot_damage_percent)) / 100;
+    }
+
+    public function playerVsBotDamageMultiplier(): float
+    {
+        return min(200, max(25, (int) $this->player_vs_bot_damage_percent)) / 100;
+    }
+
+    public function botPowerCeiling(int $playerPower): int
+    {
+        $playerPower = max(1, $playerPower);
+        $percentCeiling = (int) floor(
+            $playerPower * min(150, max(50, (int) $this->bot_matchmaking_max_power_percent)) / 100
+        );
+        $powerGap = max(0, (int) $this->bot_matchmaking_power_gap);
+
+        if ($powerGap === 0) {
+            return max(1, $percentCeiling);
+        }
+
+        return max(1, min($percentCeiling, $playerPower - $powerGap));
     }
 
     /**
@@ -226,6 +271,11 @@ class ArenaSetting extends Model
             'minimum_reward_multiplier' => 'float',
             'matchmaking_level_difference' => 'integer',
             'matchmaking_power_score_difference' => 'integer',
+            'bot_global_strength_percent' => 'integer',
+            'bot_damage_percent' => 'integer',
+            'player_vs_bot_damage_percent' => 'integer',
+            'bot_matchmaking_max_power_percent' => 'integer',
+            'bot_matchmaking_power_gap' => 'integer',
             'power_score_level_weight' => 'float',
             'power_score_skill_weight' => 'float',
             'power_score_equipment_weight' => 'float',

@@ -6,6 +6,7 @@ use App\Models\ArenaSetting;
 use App\Models\BalanceChangeLog;
 use App\Models\Battle;
 use App\Models\BattleParticipant;
+use App\Models\BotProfile;
 use App\Models\Creature;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
@@ -29,6 +30,15 @@ class BalanceSettingsTest extends TestCase
             ->get(route('filament.admin.resources.arena-settings.index'))
             ->assertOk()
             ->assertSee('MVP balance');
+
+        $this->actingAs($admin)
+            ->get(route('filament.admin.resources.arena-settings.edit', ['record' => ArenaSetting::query()->firstOrFail()]))
+            ->assertOk()
+            ->assertSee('Баланс игроков и ботов')
+            ->assertSee('Общая сила ботов')
+            ->assertSee('Урон ботов по игрокам')
+            ->assertSee('Урон игроков по ботам')
+            ->assertSee('Макс. power score бота');
 
         $this->actingAs($admin)
             ->get(route('filament.admin.resources.balance-change-logs.index'))
@@ -198,6 +208,61 @@ class BalanceSettingsTest extends TestCase
         ]);
 
         $this->assertSame(47, app(PowerScoreService::class)->calculate($creature));
+    }
+
+    public function test_global_and_profile_bot_strength_are_applied_to_special_hp_and_power_score(): void
+    {
+        $settings = ArenaSetting::factory()->create([
+            'bot_global_strength_percent' => 80,
+            'power_score_level_weight' => 0,
+            'power_score_skill_weight' => 0,
+            'power_score_equipment_weight' => 0,
+        ]);
+        $profile = BotProfile::factory()->create([
+            'strength_percent' => 125,
+        ]);
+        $creature = $this->creatureFor($profile->user, [
+            'strength' => 10,
+            'perception' => 10,
+            'endurance' => 10,
+            'charisma' => 10,
+            'intelligence' => 10,
+            'agility' => 10,
+            'luck' => 10,
+            'max_hp' => 150,
+            'current_hp' => 150,
+        ]);
+
+        $this->assertSame(100, $profile->user->botStrengthPercent($settings));
+        $this->assertSame(10, $creature->effectiveSpecialValues($settings)['strength']);
+        $this->assertSame(150, $creature->effectiveMaxHp($settings));
+        $this->assertSame(70, app(PowerScoreService::class)->calculate($creature, $settings));
+
+        $settings->update(['bot_global_strength_percent' => 120]);
+        $settings->refresh();
+
+        $this->assertSame(150, $profile->user->botStrengthPercent($settings));
+        $this->assertSame(15, $creature->effectiveSpecialValues($settings)['strength']);
+        $this->assertSame(225, $creature->effectiveMaxHp($settings));
+        $this->assertSame(105, app(PowerScoreService::class)->calculate($creature, $settings));
+    }
+
+    public function test_bot_power_ceiling_uses_admin_percent_and_gap(): void
+    {
+        $settings = ArenaSetting::factory()->create([
+            'bot_matchmaking_max_power_percent' => 110,
+            'bot_matchmaking_power_gap' => 0,
+        ]);
+
+        $this->assertSame(220, $settings->botPowerCeiling(200));
+
+        $settings->update([
+            'bot_matchmaking_max_power_percent' => 97,
+            'bot_matchmaking_power_gap' => 5,
+        ]);
+
+        $this->assertSame(194, $settings->botPowerCeiling(200));
+        $this->assertSame(95, $settings->botPowerCeiling(100));
     }
 
     /**

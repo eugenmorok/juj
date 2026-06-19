@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\BattleStateUpdated;
 use App\Jobs\ResolveInteractiveBattleRound;
+use App\Models\ArenaSetting;
 use App\Models\Battle;
 use App\Models\BattleAction;
 use App\Models\BattleEvent;
@@ -32,9 +33,7 @@ class InteractiveBattleService
 
     private const STATE_CACHE_TTL_SECONDS = 43200;
 
-    private const BOT_DAMAGE_MULTIPLIER = 0.80;
-
-    private const PLAYER_VS_BOT_DAMAGE_MULTIPLIER = 1.15;
+    private ?ArenaSetting $settings = null;
 
     public function __construct(
         private readonly PowerScoreService $powerScore,
@@ -376,7 +375,7 @@ class InteractiveBattleService
             'creature_id' => $creature->id,
             'is_bot' => (bool) $creature->user?->is_bot,
             'side' => $side,
-            'power_score_before' => $this->powerScore->calculate($creature),
+            'power_score_before' => $this->powerScore->calculate($creature, $this->balanceSettings()),
             'hp_before' => $maxHp,
             'hp_after' => $maxHp,
             'level_before' => $creature->level,
@@ -889,7 +888,7 @@ class InteractiveBattleService
      */
     private function special(BattleParticipant $participant, array $roundBonus = []): array
     {
-        $values = $participant->creature->effectiveSpecialValues();
+        $values = $participant->creature->effectiveSpecialValues($this->balanceSettings());
 
         foreach (($participant->creature->user?->battleSupportBonus() ?? []) as $attribute => $value) {
             $values[$attribute] = ($values[$attribute] ?? 0) + $value;
@@ -960,9 +959,10 @@ class InteractiveBattleService
      */
     private function applyPveDamageBalance(BattleParticipant $attacker, BattleParticipant $target, int $damage): array
     {
+        $settings = $this->balanceSettings();
         $multiplier = match (true) {
-            $attacker->is_bot && ! $target->is_bot => self::BOT_DAMAGE_MULTIPLIER,
-            ! $attacker->is_bot && $target->is_bot => self::PLAYER_VS_BOT_DAMAGE_MULTIPLIER,
+            $attacker->is_bot && ! $target->is_bot => $settings->botDamageMultiplier(),
+            ! $attacker->is_bot && $target->is_bot => $settings->playerVsBotDamageMultiplier(),
             default => 1.0,
         };
 
@@ -1089,7 +1089,7 @@ class InteractiveBattleService
 
         return max(
             1,
-            $creature->effectiveMaxHp()
+            $creature->effectiveMaxHp($this->balanceSettings())
                 + ($creature->level * 5)
                 + (($supportEndurance + $arenaEndurance) * 10),
         );
@@ -1100,6 +1100,11 @@ class InteractiveBattleService
         $hash = crc32(implode('|', [$battle->seed, $round->round_number, $creatureId, $salt]));
 
         return $min + ((int) $hash % (($max - $min) + 1));
+    }
+
+    private function balanceSettings(): ArenaSetting
+    {
+        return $this->settings ??= ArenaSetting::current();
     }
 
     private function clamp(int $value, int $min, int $max): int

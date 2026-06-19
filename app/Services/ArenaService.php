@@ -37,7 +37,7 @@ class ArenaService
     {
         $settings = ArenaSetting::current();
         $creature->loadMissing(['skills', 'equipmentRows.itemInstance.item']);
-        $creaturePower = $this->powerScore->calculate($creature);
+        $creaturePower = $this->powerScore->calculate($creature, $settings);
 
         $realCandidates = Creature::query()
             ->where('id', '!=', $creature->id)
@@ -80,10 +80,10 @@ class ArenaService
         $powerDifference = $settings->matchmaking_power_score_difference > 0
             ? $settings->matchmaking_power_score_difference
             : max(25, (int) ceil($creaturePower * 0.25));
-        $botPowerCeiling = max(1, min($creaturePower - 5, (int) floor($creaturePower * 0.97)));
+        $botPowerCeiling = $settings->botPowerCeiling($creaturePower);
         $powerCandidates = $matchCandidates
-            ->filter(function (Creature $candidate) use ($creaturePower, $powerDifference, $botPowerCeiling): bool {
-                $candidatePower = $this->powerScore->calculate($candidate);
+            ->filter(function (Creature $candidate) use ($creaturePower, $powerDifference, $botPowerCeiling, $settings): bool {
+                $candidatePower = $this->powerScore->calculate($candidate, $settings);
 
                 return abs($candidatePower - $creaturePower) <= $powerDifference
                     && (! $candidate->user?->is_bot || $candidatePower <= $botPowerCeiling);
@@ -95,7 +95,7 @@ class ArenaService
         }
 
         return $matchCandidates
-            ->sortBy(fn (Creature $candidate): int => abs($this->powerScore->calculate($candidate) - $creaturePower) + (abs($candidate->level - $creature->level) * 10))
+            ->sortBy(fn (Creature $candidate): int => abs($this->powerScore->calculate($candidate, $settings) - $creaturePower) + (abs($candidate->level - $creature->level) * 10))
             ->first();
     }
 

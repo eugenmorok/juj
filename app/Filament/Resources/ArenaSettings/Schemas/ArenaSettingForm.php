@@ -217,6 +217,55 @@ class ArenaSettingForm
                             ->required(),
                     ])
                     ->columns(3),
+                Section::make('Баланс игроков и ботов')
+                    ->description('Глобальные PvE-коэффициенты применяются сразу, без перегенерации существующих ботов.')
+                    ->schema([
+                        TextInput::make('bot_global_strength_percent')
+                            ->label('Общая сила ботов')
+                            ->helperText('Умножается на индивидуальную силу профиля и влияет на SPECIAL, HP и power score.')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(50)
+                            ->maxValue(150)
+                            ->suffix('%')
+                            ->required(),
+                        TextInput::make('bot_damage_percent')
+                            ->label('Урон ботов по игрокам')
+                            ->helperText('100% — без дополнительного ослабления или усиления.')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(25)
+                            ->maxValue(200)
+                            ->suffix('%')
+                            ->required(),
+                        TextInput::make('player_vs_bot_damage_percent')
+                            ->label('Урон игроков по ботам')
+                            ->helperText('Значение выше 100% даёт игроку преимущество в PvE.')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(25)
+                            ->maxValue(200)
+                            ->suffix('%')
+                            ->required(),
+                        TextInput::make('bot_matchmaking_max_power_percent')
+                            ->label('Макс. power score бота')
+                            ->helperText('Процент от power score игрока. Можно задать больше 100%, если нужны более сложные соперники.')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(50)
+                            ->maxValue(150)
+                            ->suffix('%')
+                            ->required(),
+                        TextInput::make('bot_matchmaking_power_gap')
+                            ->label('Запас power score игрока')
+                            ->helperText('Дополнительный минимум, на который бот должен быть слабее. 0 отключает этот запас.')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(1000)
+                            ->required(),
+                    ])
+                    ->columns(3),
                 Section::make('Экономика инвентаря')
                     ->schema([
                         TextInput::make('inventory_slot_base_cost')

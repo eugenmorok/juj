@@ -58,12 +58,36 @@
                             @php($item = $inventoryItem->itemInstance?->item)
                             @if ($item)
                                 <option value="{{ $inventoryItem->id }}" @selected((string) old('inventory_item_id') === (string) $inventoryItem->id)>
-                                    {{ $item->name }} · {{ $inventoryItem->itemInstance->remainingUses() }} шт.
+                                    {{ $item->name }}
+                                    @if ($item->effectSummary(false))
+                                        · {{ $item->effectSummary(false) }}
+                                    @endif
+                                    · {{ $inventoryItem->itemInstance->remainingUses() }} шт.
                                 </option>
                             @endif
                         @endforeach
                     </select>
                 </label>
+
+                @if ($availableConsumables->isNotEmpty())
+                    <div class="grid gap-2 sm:grid-cols-2">
+                        @foreach ($availableConsumables as $inventoryItem)
+                            @php($item = $inventoryItem->itemInstance?->item)
+                            @if ($item)
+                                <article class="rounded-md border border-zinc-700 bg-zinc-950/70 p-3 text-sm">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <strong class="text-zinc-100">{{ $item->name }}</strong>
+                                        <span class="text-xs text-emerald-300">{{ $inventoryItem->itemInstance->remainingUses() }} шт.</span>
+                                    </div>
+                                    @if ($item->description)
+                                        <p class="mt-1 text-xs text-zinc-400">{{ $item->description }}</p>
+                                    @endif
+                                    <x-item-effects :item="$item" />
+                                </article>
+                            @endif
+                        @endforeach
+                    </div>
+                @endif
 
                 <button type="submit">Подтвердить шаг</button>
             </form>

@@ -212,6 +212,30 @@ class CreatureCreationTest extends TestCase
             ->assertSessionHasErrors('points');
     }
 
+    public function test_species_base_is_free_and_player_can_spend_full_hundred_points_above_it(): void
+    {
+        $user = User::factory()->create();
+        $species = $this->starterSpecies();
+
+        $this->actingAs($user)
+            ->post(route('entities.store'), $this->creationPayload($species, [
+                'strength' => 20,
+                'perception' => 20,
+                'endurance' => 20,
+                'charisma' => 20,
+                'intelligence' => 20,
+                'agility' => 20,
+                'luck' => 15,
+            ]))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $creature = Creature::query()->firstOrFail();
+
+        $this->assertSame(100, $creature->spentCreationPoints($species));
+        $this->assertSame(0, $user->refresh()->creature_creation_points);
+    }
+
     public function test_player_cannot_exceed_starter_special_cap(): void
     {
         $user = User::factory()->create();

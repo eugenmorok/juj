@@ -216,7 +216,7 @@ class ArenaMatchmakingService
         $powerDiff = $settings->matchmaking_power_score_difference > 0
             ? $settings->matchmaking_power_score_difference
             : max(25, (int) ceil($session->power_score * 0.25));
-        $botPowerCeiling = max(1, min($session->power_score - 5, (int) floor($session->power_score * 0.97)));
+        $botPowerCeiling = $settings->botPowerCeiling($session->power_score);
 
         return $candidate['level_delta'] <= $levelDiff
             && $candidate['power_delta'] <= $powerDiff
