@@ -273,7 +273,7 @@ class BattleVisualizer {
         if (HIT_EVENTS.has(type) && actor && target) {
             await this.attack(actor, target, event, CRITICAL_EVENTS.has(type));
         } else if (MISS_EVENTS.has(type) && actor && target) {
-            await this.miss(actor, target);
+            await this.miss(actor, target, event);
         } else if (ITEM_EVENTS.has(type) && actor) {
             await this.itemEffect(actor, event);
         } else if (FINISH_EVENTS.has(type)) {
@@ -291,17 +291,23 @@ class BattleVisualizer {
 
         const zone = event.payload?.attack_zone || 'body';
         const impact = this.zonePosition(target, zone);
+        const guarded = this.isZoneGuarded(event);
+        const guardAnimation = guarded ? this.guardShield(target, zone) : Promise.resolve();
 
-        this.hitSprite(target, zone, critical);
+        this.hitSprite(target, zone, critical, guarded);
+        if (guarded) {
+            this.floatText(target, 'ЩИТ', 0x9be7ff, 22, { x: impact.x, y: impact.y - 44 });
+        }
         this.floatText(
             target,
             `-${Number(event.payload?.damage || 0)}`,
-            critical ? 0xffd451 : 0xfff0cf,
-            critical ? 34 : 26,
+            guarded ? 0xbbeeff : (critical ? 0xffd451 : 0xfff0cf),
+            guarded ? 22 : (critical ? 34 : 26),
             impact,
         );
 
         await Promise.all([
+            guardAnimation,
             this.shake(target, critical ? 13 : 8, critical ? 330 : 230),
             this.tween(190, (progress) => {
                 actor.root.x = actor.baseX + (direction * 45 * (1 - progress));
@@ -316,7 +322,7 @@ class BattleVisualizer {
         await this.delay(critical ? 220 : 100);
     }
 
-    async miss(actor, target) {
+    async miss(actor, target, event) {
         const direction = target.baseX > actor.baseX ? 1 : -1;
 
         await Promise.all([
@@ -327,6 +333,13 @@ class BattleVisualizer {
                 target.root.x = target.baseX + (direction * 24 * Math.sin(progress * Math.PI));
             }),
         ]);
+
+        if (this.isZoneGuarded(event)) {
+            const zone = event.payload?.attack_zone || 'body';
+            const impact = this.zonePosition(target, zone);
+            await this.guardShield(target, zone);
+            this.floatText(target, 'ЩИТ', 0x9be7ff, 22, { x: impact.x, y: impact.y - 44 });
+        }
 
         this.floatText(target, 'ПРОМАХ', 0xd8e3dc, 20);
         await this.delay(130);
@@ -384,17 +397,59 @@ class BattleVisualizer {
         }).then(() => flash.destroy());
     }
 
-    hitSprite(fighter, zone, critical) {
+    isZoneGuarded(event) {
+        const attackZone = event?.payload?.attack_zone;
+        const defenseZone = event?.payload?.defense_zone;
+
+        return Boolean(attackZone && defenseZone && attackZone === defenseZone);
+    }
+
+    guardShield(fighter, zone) {
         const position = this.zonePosition(fighter, zone);
         const effect = new Container();
-        const burstColor = critical ? 0xffc341 : 0xffeee0;
+        const aura = new Graphics()
+            .circle(0, 0, 42)
+            .fill({ color: 0x4cc9f0, alpha: 0.18 })
+            .stroke({ color: 0xbdefff, width: 3, alpha: 0.8 });
+        const body = new Graphics()
+            .roundRect(-26, -36, 52, 62, 13)
+            .fill({ color: 0x1c5f7a, alpha: 0.9 })
+            .stroke({ color: 0xd8f6ff, width: 4, alpha: 0.98 });
+        const lowerGuard = new Graphics()
+            .ellipse(0, 19, 23, 17)
+            .fill({ color: 0x1c5f7a, alpha: 0.92 })
+            .stroke({ color: 0xd8f6ff, width: 3, alpha: 0.92 });
+        const shine = new Graphics()
+            .roundRect(-6, -29, 12, 44, 5)
+            .fill({ color: 0xe8fbff, alpha: 0.34 });
+        const rivet = new Graphics()
+            .circle(0, -7, 5)
+            .fill({ color: 0xe8fbff, alpha: 0.72 });
+
+        effect.addChild(aura, body, lowerGuard, shine, rivet);
+        effect.position.set(position.x, position.y);
+        effect.scale.set(0.55);
+        this.effects.addChild(effect);
+
+        return this.tween(520, (progress) => {
+            const pulse = Math.sin(progress * Math.PI);
+            effect.scale.set(0.55 + pulse * 0.45);
+            effect.rotation = (fighter.index === 0 ? -1 : 1) * pulse * 0.12;
+            effect.alpha = 1 - Math.max(0, (progress - 0.72) / 0.28);
+        }).then(() => effect.destroy({ children: true }));
+    }
+
+    hitSprite(fighter, zone, critical, guarded = false) {
+        const position = this.zonePosition(fighter, zone);
+        const effect = new Container();
+        const burstColor = guarded ? 0x8bdcff : (critical ? 0xffc341 : 0xffeee0);
         const burst = new Graphics()
-            .circle(0, 0, critical ? 26 : 19)
-            .fill({ color: burstColor, alpha: critical ? 0.66 : 0.5 })
+            .circle(0, 0, critical ? 26 : (guarded ? 22 : 19))
+            .fill({ color: burstColor, alpha: critical ? 0.66 : (guarded ? 0.42 : 0.5) })
             .stroke({ color: 0xffffff, width: critical ? 4 : 3, alpha: 0.9 });
         const slashA = new Graphics()
             .roundRect(-4, -30, 8, 60, 4)
-            .fill({ color: critical ? 0xff7a2d : 0xf7f0d4, alpha: 0.96 });
+            .fill({ color: guarded ? 0xbdefff : (critical ? 0xff7a2d : 0xf7f0d4), alpha: 0.96 });
         const slashB = new Graphics()
             .roundRect(-3, -22, 6, 44, 3)
             .fill({ color: 0xffffff, alpha: 0.86 });

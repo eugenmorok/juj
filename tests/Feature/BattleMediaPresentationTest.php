@@ -93,6 +93,8 @@ class BattleMediaPresentationTest extends TestCase
             ->assertSee('battle-event-damage--positive', false)
             ->assertSee('battle-event-damage--negative', false)
             ->assertSee('battle-event-row--positive', false)
+            ->assertSee('"attack_zone":"body"', false)
+            ->assertSee('"defense_zone":"body"', false)
             ->assertSee('19 HP')
             ->assertSee('7 HP')
             ->assertSee('Блок');
