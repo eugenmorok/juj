@@ -46,8 +46,19 @@ git diff --check
 
 ### Осталось
 
-- Закоммитить и запушить ветку.
-- Развернуть production до актуального состояния ветки и проверить `/login`.
+- Основная задача завершена и опубликована.
+- Наблюдать в production за UX боя: щит должен появляться только на ударах в выбранную защищаемую зону.
+
+### Production
+
+- Изменения опубликованы коммитом `d125bee` (`Add guarded-zone shield battle effect`).
+- `main` fast-forward обновлён до `d125bee` и запушен в GitHub.
+- Production `/var/www/rpg-arena` обновлён до `d125bee`, рабочее дерево чистое.
+- Миграции `2026_06_21_000001_add_player_doctrine_fields` и `2026_06_21_000002_add_player_perk_fields` применены в batch 18.
+- Production-сборка Vite выполнена успешно; остаётся прежний warning Vite про `/game-assets/shop/merchant-hall.webp`.
+- Laravel cache warmup выполнен: `config:cache`, `route:cache`, `view:cache`.
+- `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны.
+- `http://176.108.254.117/login` возвращает HTTP 200.
 
 ## 2026-06-21 — доктрина и уровни игрока
 
