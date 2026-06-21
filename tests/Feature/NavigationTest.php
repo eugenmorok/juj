@@ -51,4 +51,17 @@ class NavigationTest extends TestCase
             ->assertSee('Инвентарь')
             ->assertSee('Справка');
     }
+
+    public function test_help_page_contains_arena_world_lore(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('help'))
+            ->assertOk()
+            ->assertSeeText('Мир Арены')
+            ->assertSeeText('Земля после Разлома')
+            ->assertSeeText('Закон Круга')
+            ->assertSeeText('арена — не развлечение богачей, а суд, рынок, храм и лаборатория одновременно');
+    }
 }

@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Магазин'])
+@extends('layouts.app', ['title' => 'Магазин', 'contentWidth' => '85%'])
 
 @section('content')
     <div class="shop-screen space-y-6">

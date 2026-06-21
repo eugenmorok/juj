@@ -34,6 +34,7 @@ class ShopPurchaseTest extends TestCase
             ->get(route('shop', ['rarity' => 'rare']))
             ->assertOk()
             ->assertSee('Магазин')
+            ->assertSee('width: 85%; max-width: none;', false)
             ->assertSee($rareItem->name)
             ->assertSeeText('Урон')
             ->assertSeeText('+6')
