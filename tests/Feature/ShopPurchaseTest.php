@@ -35,6 +35,8 @@ class ShopPurchaseTest extends TestCase
             ->assertOk()
             ->assertSee('Магазин')
             ->assertSee('width: 85%; max-width: none;', false)
+            ->assertSee('item-details__tile', false)
+            ->assertDontSee('bg-zinc-950/60', false)
             ->assertSee($rareItem->name)
             ->assertSeeText('Урон')
             ->assertSeeText('+6')

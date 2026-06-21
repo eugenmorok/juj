@@ -1,5 +1,50 @@
 # HANDOFF
 
+## 2026-06-21 — читаемость магазина в светлой теме
+
+### Цель
+
+Исправить плохую читаемость карточек магазина в светлой теме и развернуть hotfix на production.
+
+### Важные решения
+
+- Причина проблемы: `x-item-details` использовал жёсткие Tailwind-классы `bg-zinc-950/60`, `text-zinc-*`, `text-rose-*`, `text-sky-*`. В светлой теме глобальные переопределения делали текст тёмным, а фон отдельных плиток оставался тёмным.
+- Исправление сделано на уровне общего компонента деталей предмета, а не только страницы магазина: так инвентарь, экипировка, выбор расходника и replay тоже не унаследуют плохой контраст в светлой теме.
+- Новые классы `item-details__*` используют CSS-переменные темы Арены и отдельные light-theme фоны для мета-плиток, урона и защиты.
+
+### Выполненные изменения
+
+- `resources/views/components/item-details.blade.php` — убраны жёсткие тёмные `zinc`/`rose`/`sky` классы; добавлены theme-aware классы `item-details__tile`, `item-details__label`, `item-details__value`.
+- `resources/css/app.css` — добавлены стили `item-details`, адаптированные под светлую и тёмную темы.
+- `tests/Feature/ShopPurchaseTest.php` — добавлена регрессия: магазин рендерит новые плитки и больше не выводит старый `bg-zinc-950/60`.
+
+### Проверки
+
+```bash
+vendor/bin/pint --dirty
+php artisan test --filter='ShopPurchaseTest'
+php artisan test
+npm run build
+git diff --check
+```
+
+### Осталось
+
+- Закоммитить, запушить и выполнить production deploy.
+
+### Текущие результаты
+
+- `vendor/bin/pint --dirty` — успешно.
+- `php artisan test --filter='ShopPurchaseTest'` — 11 тестов, 80 assertions, успешно.
+- `php artisan test` — 139 тестов, 905 assertions, успешно.
+- `npm run build` — успешно; остаётся прежний warning Vite про `/game-assets/shop/merchant-hall.webp`.
+- `git diff --check` — успешно.
+- Browser local на `http://127.0.0.1:8011/shop`:
+  - светлая тема включена штатной кнопкой темы;
+  - карточки магазина содержат 74 `item-details__tile`;
+  - старый тёмный класс `bg-zinc-950/60` отсутствует;
+  - пример мета-плитки `Тип / Экипировка`: фон светлый, текст тёмный и читаемый.
+
 ## 2026-06-21 — магазин 85% и базовый лор мира Арены
 
 ### Цель
