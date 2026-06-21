@@ -26,7 +26,7 @@ class PlayerProgressService
     }
 
     /**
-     * @return array{player_xp: int, creation_points: int, doctrine_points: int, level_before: int, level_after: int}
+     * @return array{player_xp: int, creation_points: int, doctrine_points: int, perk_points: int, level_before: int, level_after: int}
      */
     public function applyBattleProgress(
         User $user,
@@ -41,6 +41,7 @@ class PlayerProgressService
                 'player_xp' => 0,
                 'creation_points' => 0,
                 'doctrine_points' => 0,
+                'perk_points' => 0,
                 'level_before' => $user->level,
                 'level_after' => $user->level,
             ];
@@ -61,12 +62,17 @@ class PlayerProgressService
             0,
             User::doctrinePointsEarnedForLevel($level) - User::doctrinePointsEarnedForLevel($levelBefore),
         );
+        $perkPoints = max(
+            0,
+            User::perkPointsEarnedForLevel($level) - User::perkPointsEarnedForLevel($levelBefore),
+        );
 
         $user->forceFill([
             'level' => $level,
             'xp' => $xp,
             'creature_creation_points' => $user->creature_creation_points + $creationPoints,
             'doctrine_points' => $user->doctrine_points + $doctrinePoints,
+            'perk_points' => $user->perk_points + $perkPoints,
         ])->save();
 
         Inventory::forUser($user->refresh())->syncSlots();
@@ -75,6 +81,7 @@ class PlayerProgressService
             'player_xp' => $playerXp,
             'creation_points' => $creationPoints,
             'doctrine_points' => $doctrinePoints,
+            'perk_points' => $perkPoints,
             'level_before' => $levelBefore,
             'level_after' => $level,
         ];
@@ -154,6 +161,40 @@ class PlayerProgressService
             $lockedUser->forceFill([
                 'doctrine_points' => $lockedUser->doctrine_points - 1,
                 $column => (int) $lockedUser->{$column} + 1,
+            ])->save();
+
+            Inventory::forUser($lockedUser->refresh())->syncSlots();
+
+            return $lockedUser;
+        });
+    }
+
+    public function buyPlayerPerk(User $user, string $perk): User
+    {
+        if (! array_key_exists($perk, User::PLAYER_PERKS)) {
+            throw ValidationException::withMessages([
+                'perk' => 'Неизвестный перк игрока.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($user, $perk): User {
+            $lockedUser = User::query()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! $lockedUser->canBuyPlayerPerk($perk)) {
+                throw ValidationException::withMessages([
+                    'perk' => 'Перк недоступен: проверь уровень, очки перков и вложения в нужную ветку доктрины.',
+                ]);
+            }
+
+            $perks = $lockedUser->playerPerks();
+            $perks[] = $perk;
+
+            $lockedUser->forceFill([
+                'perk_points' => $lockedUser->perk_points - 1,
+                'player_perks' => array_values(array_unique($perks)),
             ])->save();
 
             Inventory::forUser($lockedUser->refresh())->syncSlots();

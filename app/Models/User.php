@@ -28,6 +28,8 @@ use Illuminate\Notifications\Notifiable;
     'doctrine_engineering',
     'doctrine_breeding',
     'doctrine_trade',
+    'perk_points',
+    'player_perks',
     'inventory_slots',
     'is_bot',
     'is_admin',
@@ -83,6 +85,44 @@ class User extends Authenticatable implements FilamentUser
         ],
     ];
 
+    public const PLAYER_PERKS = [
+        'battle-drill' => [
+            'label' => 'Боевая муштра',
+            'branch' => 'tactic',
+            'required_level' => 3,
+            'required_doctrine' => 2,
+            'description' => 'Тактическая подготовка даёт всем сущностям ещё +1 к Perception.',
+        ],
+        'mentor-novices' => [
+            'label' => 'Наставник новичков',
+            'branch' => 'command',
+            'required_level' => 3,
+            'required_doctrine' => 2,
+            'description' => 'Сущности ниже уровня игрока получают на 15% больше XP.',
+        ],
+        'equipment-tuning' => [
+            'label' => 'Подгонка снаряжения',
+            'branch' => 'engineering',
+            'required_level' => 5,
+            'required_doctrine' => 3,
+            'description' => 'Прямые бонусы экипировки к Урону и Защите дополнительно усиливаются на 5%.',
+        ],
+        'breeder' => [
+            'label' => 'Заводчик',
+            'branch' => 'breeding',
+            'required_level' => 5,
+            'required_doctrine' => 3,
+            'description' => 'Очки создания за победы получают ещё +10% к шансу и размеру.',
+        ],
+        'trophy-hunter' => [
+            'label' => 'Охотник за трофеями',
+            'branch' => 'trade',
+            'required_level' => 5,
+            'required_doctrine' => 3,
+            'description' => 'Жетоны за бои увеличиваются ещё на 8%.',
+        ],
+    ];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -103,6 +143,8 @@ class User extends Authenticatable implements FilamentUser
             'doctrine_engineering' => 'integer',
             'doctrine_breeding' => 'integer',
             'doctrine_trade' => 'integer',
+            'perk_points' => 'integer',
+            'player_perks' => 'array',
             'inventory_slots' => 'integer',
             'is_bot' => 'boolean',
             'is_admin' => 'boolean',
@@ -152,7 +194,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'agility' => min(self::MAX_SECONDARY_BATTLE_SUPPORT_BONUS, intdiv($this->doctrine_tactic, 4)),
             'endurance' => min(self::MAX_SECONDARY_BATTLE_SUPPORT_BONUS, intdiv($this->doctrine_command, 4)),
-            'perception' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 4) + intdiv($this->doctrine_tactic, 2)),
+            'perception' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 4) + intdiv($this->doctrine_tactic, 2) + ($this->hasPlayerPerk('battle-drill') ? 1 : 0)),
             'charisma' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 3) + intdiv($this->doctrine_command, 2)),
             'intelligence' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 5) + intdiv($this->doctrine_engineering, 2)),
         ];
@@ -192,14 +234,67 @@ class User extends Authenticatable implements FilamentUser
         return $this->doctrine_points + $this->doctrinePointsSpent();
     }
 
+    public static function perkPointsEarnedForLevel(int $level): int
+    {
+        $level = max(1, $level);
+        $milestones = [3, 5, 8, 11, 14, 17, 20];
+        $points = collect($milestones)->filter(fn (int $milestone): bool => $level >= $milestone)->count();
+
+        if ($level > 20) {
+            $points += intdiv($level - 20, 4);
+        }
+
+        return $points;
+    }
+
+    public function perkPointsEarned(): int
+    {
+        return self::perkPointsEarnedForLevel($this->level);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function playerPerks(): array
+    {
+        return collect($this->player_perks ?? [])
+            ->filter(fn (mixed $perk): bool => is_string($perk) && array_key_exists($perk, self::PLAYER_PERKS))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function hasPlayerPerk(string $perk): bool
+    {
+        return in_array($perk, $this->playerPerks(), true);
+    }
+
+    public function canBuyPlayerPerk(string $perk): bool
+    {
+        if ($this->is_bot || $this->perk_points < 1 || $this->hasPlayerPerk($perk)) {
+            return false;
+        }
+
+        $meta = self::PLAYER_PERKS[$perk] ?? null;
+
+        if (! $meta || $this->level < $meta['required_level']) {
+            return false;
+        }
+
+        $branch = $meta['branch'];
+        $column = self::DOCTRINE_ATTRIBUTES[$branch]['column'] ?? null;
+
+        return $column !== null && (int) $this->{$column} >= (int) $meta['required_doctrine'];
+    }
+
     public function creationPointRewardBonusPercent(): int
     {
-        return $this->is_bot ? 0 : min(30, $this->doctrine_breeding * 3);
+        return $this->is_bot ? 0 : min(40, ($this->doctrine_breeding * 3) + ($this->hasPlayerPerk('breeder') ? 10 : 0));
     }
 
     public function tokenRewardBonusPercent(): int
     {
-        return $this->is_bot ? 0 : min(30, $this->doctrine_trade * 3);
+        return $this->is_bot ? 0 : min(40, ($this->doctrine_trade * 3) + ($this->hasPlayerPerk('trophy-hunter') ? 8 : 0));
     }
 
     public function tokenRewardMultiplier(): float
@@ -207,9 +302,18 @@ class User extends Authenticatable implements FilamentUser
         return 1 + ($this->tokenRewardBonusPercent() / 100);
     }
 
+    public function creatureXpMultiplier(Creature $creature): float
+    {
+        if ($this->is_bot || ! $this->hasPlayerPerk('mentor-novices')) {
+            return 1.0;
+        }
+
+        return $creature->level < $this->level ? 1.15 : 1.0;
+    }
+
     public function equipmentCombatBonusPercent(): int
     {
-        return $this->is_bot ? 0 : min(20, $this->doctrine_engineering * 2);
+        return $this->is_bot ? 0 : min(25, ($this->doctrine_engineering * 2) + ($this->hasPlayerPerk('equipment-tuning') ? 5 : 0));
     }
 
     public function equipmentCombatBonusMultiplier(): float

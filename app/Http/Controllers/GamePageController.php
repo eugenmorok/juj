@@ -38,6 +38,14 @@ class GamePageController extends Controller
         return back()->with('status', "Доктрина улучшена: {$label}.");
     }
 
+    public function buyPerk(Request $request, string $perk, PlayerProgressService $progress): RedirectResponse
+    {
+        $user = $progress->buyPlayerPerk($request->user(), $perk);
+        $label = $user::PLAYER_PERKS[$perk]['label'] ?? $perk;
+
+        return back()->with('status', "Перк получен: {$label}.");
+    }
+
     public function inventory(Request $request): View
     {
         return view('game.inventory', [

@@ -55,6 +55,7 @@ class BattleRewardService
                     ->whereKey($participant->creature_id)
                     ->lockForUpdate()
                     ->firstOrFail();
+                $rewardXp = (int) floor($rewardXp * $user->creatureXpMultiplier($creature));
                 $rewardTokens = (int) floor($baseRewards['tokens'] * $multiplier * $user->tokenRewardMultiplier());
 
                 $levelBefore = $creature->level;
@@ -208,9 +209,11 @@ class BattleRewardService
         $lines = $battle->participants
             ->map(function (BattleParticipant $participant): string {
                 $doctrinePoints = $this->rewardDoctrinePoints($participant);
+                $perkPoints = $this->rewardPerkPoints($participant);
                 $doctrineText = $doctrinePoints > 0 ? ", +{$doctrinePoints} очков доктрины" : '';
+                $perkText = $perkPoints > 0 ? ", +{$perkPoints} очков перков" : '';
 
-                return "{$participant->creature->name}: +{$participant->reward_xp} XP сущности, +{$participant->reward_player_xp} XP игрока, +{$participant->reward_development_points} очков развития, +{$participant->reward_tokens} токенов, +{$participant->reward_creation_points} очков создания{$doctrineText}.";
+                return "{$participant->creature->name}: +{$participant->reward_xp} XP сущности, +{$participant->reward_player_xp} XP игрока, +{$participant->reward_development_points} очков развития, +{$participant->reward_tokens} токенов, +{$participant->reward_creation_points} очков создания{$doctrineText}{$perkText}.";
             })
             ->implode(' ');
 
@@ -227,6 +230,7 @@ class BattleRewardService
                         'reward_development_points' => $participant->reward_development_points,
                         'reward_creation_points' => $participant->reward_creation_points,
                         'reward_doctrine_points' => $this->rewardDoctrinePoints($participant),
+                        'reward_perk_points' => $this->rewardPerkPoints($participant),
                         'reward_multiplier' => $participant->reward_multiplier,
                     ])
                     ->values()
@@ -246,6 +250,19 @@ class BattleRewardService
             0,
             User::doctrinePointsEarnedForLevel((int) $participant->player_level_after)
             - User::doctrinePointsEarnedForLevel((int) $participant->player_level_before),
+        );
+    }
+
+    private function rewardPerkPoints(BattleParticipant $participant): int
+    {
+        if ($participant->player_level_before === null || $participant->player_level_after === null) {
+            return 0;
+        }
+
+        return max(
+            0,
+            User::perkPointsEarnedForLevel((int) $participant->player_level_after)
+            - User::perkPointsEarnedForLevel((int) $participant->player_level_before),
         );
     }
 }

@@ -44,7 +44,7 @@ class UsersTable
                     ->sortable(),
                 TextColumn::make('doctrine_state')
                     ->label('Доктрина')
-                    ->state(fn (User $record): string => "св. {$record->doctrine_points} / потрач. {$record->doctrinePointsSpent()}"),
+                    ->state(fn (User $record): string => "док. св. {$record->doctrine_points} / потрач. {$record->doctrinePointsSpent()}; перки св. {$record->perk_points} / взято ".count($record->playerPerks())),
                 TextColumn::make('inventory_state')
                     ->label('Инвентарь')
                     ->state(function (User $record): string {

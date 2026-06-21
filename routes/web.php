@@ -35,6 +35,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/profile', [GamePageController::class, 'profile'])->name('profile');
     Route::post('/profile/creation-points/convert', [GamePageController::class, 'convertCreationPoints'])->name('profile.creation-points.convert');
     Route::post('/profile/doctrine/{attribute}', [GamePageController::class, 'increaseDoctrine'])->name('profile.doctrine.increase');
+    Route::post('/profile/perks/{perk}', [GamePageController::class, 'buyPerk'])->name('profile.perks.buy');
     Route::get('/entities', [CreatureController::class, 'index'])->name('entities.index');
     Route::get('/entities/create', [CreatureController::class, 'create'])->name('entities.create');
     Route::post('/entities', [CreatureController::class, 'store'])->name('entities.store');

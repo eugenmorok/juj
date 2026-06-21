@@ -5,6 +5,7 @@
         $xpToNextLevel = \App\Services\PlayerProgressService::xpToNextLevel($user->level);
         $support = $user->battleSupportBonus();
         $doctrineAttributes = $user->doctrineAttributes();
+        $ownedPerks = $user->playerPerks();
     @endphp
 
     <div class="space-y-6">
@@ -19,7 +20,7 @@
             </span>
         </div>
 
-        <section class="grid gap-4 md:grid-cols-5">
+        <section class="grid gap-4 md:grid-cols-6">
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Уровень</div>
                 <div class="mt-2 text-3xl font-semibold text-white">{{ $user->level }}</div>
@@ -35,6 +36,10 @@
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Очки доктрины</div>
                 <div class="mt-2 text-3xl font-semibold text-white">{{ $user->doctrine_points }}</div>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                <div class="text-sm text-zinc-400">Очки перков</div>
+                <div class="mt-2 text-3xl font-semibold text-white">{{ $user->perk_points }}</div>
             </div>
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Скидка магазина</div>
@@ -115,6 +120,54 @@
                                 @disabled($user->doctrine_points < 1 || $value >= \App\Models\User::MAX_DOCTRINE_ATTRIBUTE)
                             >
                                 Вложить очко
+                            </button>
+                        </form>
+                    </article>
+                @endforeach
+            </div>
+        </section>
+
+        <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="font-semibold text-white">Перки игрока</h2>
+                    <p class="mt-2 text-sm text-zinc-400">
+                        Перки — редкие аккаунтные умения. Очки перков выдаются на уровнях 3, 5, 8, 11, 14, 17, 20 и дальше каждые 4 уровня.
+                    </p>
+                </div>
+                <div class="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-100">
+                    Свободно: <strong>{{ $user->perk_points }}</strong>
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                @foreach (\App\Models\User::PLAYER_PERKS as $perk => $meta)
+                    @php
+                        $branch = $meta['branch'];
+                        $branchLabel = \App\Models\User::DOCTRINE_ATTRIBUTES[$branch]['label'] ?? $branch;
+                        $branchValue = $doctrineAttributes[$branch] ?? 0;
+                        $owned = in_array($perk, $ownedPerks, true);
+                        $available = $user->canBuyPlayerPerk($perk);
+                    @endphp
+                    <article class="rounded-md border {{ $owned ? 'border-sky-500/40 bg-sky-500/10' : 'border-zinc-800 bg-zinc-950' }} p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-white">{{ $meta['label'] }}</div>
+                                <div class="mt-1 text-xs text-zinc-500">{{ $branchLabel }} {{ $branchValue }}/{{ $meta['required_doctrine'] }}, ур. {{ $meta['required_level'] }}</div>
+                            </div>
+                            @if ($owned)
+                                <span class="rounded-md border border-sky-500/40 px-2 py-1 text-xs text-sky-100">Взят</span>
+                            @endif
+                        </div>
+                        <p class="mt-3 min-h-12 text-xs text-zinc-400">{{ $meta['description'] }}</p>
+                        <form method="POST" action="{{ route('profile.perks.buy', $perk) }}" class="mt-4">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="w-full rounded-md border border-sky-500/40 px-3 py-2 text-sm font-medium text-sky-100 hover:bg-sky-500/10 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
+                                @disabled(! $available)
+                            >
+                                Получить перк
                             </button>
                         </form>
                     </article>

@@ -39,6 +39,8 @@ class UserFactory extends Factory
             'doctrine_engineering' => 0,
             'doctrine_breeding' => 0,
             'doctrine_trade' => 0,
+            'perk_points' => 0,
+            'player_perks' => [],
             'inventory_slots' => 5,
             'is_bot' => false,
             'is_admin' => false,
@@ -80,6 +82,8 @@ class UserFactory extends Factory
             'doctrine_engineering' => 0,
             'doctrine_breeding' => 0,
             'doctrine_trade' => 0,
+            'perk_points' => 0,
+            'player_perks' => [],
         ]);
     }
 }
