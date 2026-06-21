@@ -117,11 +117,12 @@
                                     </div>
                                 </div>
 
-                                @if ($item->description)
-                                    <p class="mt-3 text-sm text-zinc-400">{{ $item->description }}</p>
-                                @endif
-
-                                <x-item-effects :item="$item" />
+                                <x-item-details
+                                    :item="$item"
+                                    :inventory-item="$inventoryItem"
+                                    :sell-price="$sellPrice"
+                                    class="mt-3"
+                                />
 
                                 @include('game.inventory.partials.use-consumable-form', [
                                     'inventoryItem' => $inventoryItem,
@@ -258,7 +259,12 @@
                                                     </div>
                                                 </div>
 
-                                                <x-item-effects :item="$item" />
+                                                <x-item-details
+                                                    :item="$item"
+                                                    :inventory-item="$inventoryItem"
+                                                    :sell-price="$sellPrice"
+                                                    class="mt-3"
+                                                />
                                             </article>
                                         @endforeach
                                     </div>

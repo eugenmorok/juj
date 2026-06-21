@@ -70,10 +70,10 @@ class Item extends Model
         'intelligence' => 'Интеллект',
         'agility' => 'Ловкость',
         'luck' => 'Удача',
-        'attack' => 'Атака',
+        'attack' => 'Урон',
         'damage' => 'Урон',
         'defense' => 'Защита',
-        'armor' => 'Броня',
+        'armor' => 'Защита',
         'hp' => 'Макс. HP',
         'max_hp' => 'Макс. HP',
         'hp_max' => 'Макс. HP',
@@ -82,6 +82,10 @@ class Item extends Model
         'crit_chance' => 'Шанс крита',
         'poison_damage' => 'Урон ядом',
     ];
+
+    public const DAMAGE_BONUS_KEYS = ['damage', 'attack'];
+
+    public const DEFENSE_BONUS_KEYS = ['defense', 'armor'];
 
     /**
      * @return BelongsTo<EquipmentSlot, $this>
@@ -181,6 +185,76 @@ class Item extends Model
             ->all();
     }
 
+    public function damageBonus(): int
+    {
+        return self::combatBonusFromBonuses($this->bonuses ?? [], self::DAMAGE_BONUS_KEYS);
+    }
+
+    public function defenseBonus(): int
+    {
+        return self::combatBonusFromBonuses($this->bonuses ?? [], self::DEFENSE_BONUS_KEYS);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function combatBonusSummaries(): array
+    {
+        $summaries = [];
+        $damage = $this->damageBonus();
+        $defense = $this->defenseBonus();
+
+        if ($damage !== 0) {
+            $summaries[] = 'Урон '.($damage > 0 ? '+' : '').$damage;
+        }
+
+        if ($defense !== 0) {
+            $summaries[] = 'Защита '.($defense > 0 ? '+' : '').$defense;
+        }
+
+        return $summaries;
+    }
+
+    public function applicabilitySummary(): string
+    {
+        $typeIds = collect($this->allowed_types ?? [])
+            ->map(fn (mixed $id): int => (int) $id)
+            ->filter()
+            ->values();
+        $speciesIds = collect($this->allowed_species ?? [])
+            ->map(fn (mixed $id): int => (int) $id)
+            ->filter()
+            ->values();
+
+        if ($typeIds->isEmpty() && $speciesIds->isEmpty()) {
+            return 'Все типы сущностей';
+        }
+
+        $parts = [];
+
+        if ($typeIds->isNotEmpty()) {
+            $types = CreatureType::query()
+                ->whereIn('id', $typeIds)
+                ->pluck('name')
+                ->filter()
+                ->values();
+
+            $parts[] = 'Типы: '.($types->isNotEmpty() ? $types->join(', ') : $typeIds->join(', '));
+        }
+
+        if ($speciesIds->isNotEmpty()) {
+            $species = CreatureSpecies::query()
+                ->whereIn('id', $speciesIds)
+                ->pluck('name')
+                ->filter()
+                ->values();
+
+            $parts[] = 'Виды: '.($species->isNotEmpty() ? $species->join(', ') : $speciesIds->join(', '));
+        }
+
+        return implode('; ', $parts);
+    }
+
     public function durationSummary(): ?string
     {
         if (! $this->duration_type) {
@@ -203,6 +277,16 @@ class Item extends Model
         }
 
         return implode(' · ', $parts);
+    }
+
+    /**
+     * @param  array<string, mixed>  $bonuses
+     * @param  list<string>  $keys
+     */
+    private static function combatBonusFromBonuses(array $bonuses, array $keys): int
+    {
+        return collect($keys)
+            ->sum(fn (string $key): int => is_numeric($bonuses[$key] ?? null) ? (int) $bonuses[$key] : 0);
     }
 
     #[Scope]

@@ -68,7 +68,11 @@
                                         <div class="mt-2">
                                             @include('partials.rarity-badge', ['item' => $equippedItem])
                                         </div>
-                                        <x-item-effects :item="$equippedItem" />
+                                        <x-item-details
+                                            :item="$equippedItem"
+                                            :slot-summary="$slot->name"
+                                            class="mt-3"
+                                        />
                                     </div>
                                     <form method="POST" action="{{ route('entities.equipment.unequip', [$creature, $equippedInstance]) }}">
                                         @csrf

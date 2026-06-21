@@ -107,10 +107,12 @@
                                                 <dt class="text-xs text-zinc-500">Предмет</dt>
                                                 <dd class="mt-1 text-sm text-zinc-100">{{ $item?->name ?? '-' }}</dd>
                                                 @if ($item)
-                                                    @if ($item->description)
-                                                        <p class="mt-1 text-xs text-zinc-400">{{ $item->description }}</p>
-                                                    @endif
-                                                    <x-item-effects :item="$item" :show-duration="false" />
+                                                    <x-item-details
+                                                        :item="$item"
+                                                        :inventory-item="$action?->inventoryItem"
+                                                        compact
+                                                        class="mt-2"
+                                                    />
                                                 @endif
                                             </div>
                                         </dl>

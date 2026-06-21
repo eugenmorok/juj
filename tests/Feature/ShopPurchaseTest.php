@@ -25,6 +25,7 @@ class ShopPurchaseTest extends TestCase
             'rarity' => 'rare',
             'price' => 120,
             'required_level' => 1,
+            'bonuses' => ['damage' => 6, 'defense' => 4],
         ]);
         Item::factory()->inactive()->create(['name' => 'Hidden Item']);
         Item::factory()->create(['name' => 'Common Plate', 'rarity' => 'common']);
@@ -34,6 +35,10 @@ class ShopPurchaseTest extends TestCase
             ->assertOk()
             ->assertSee('Магазин')
             ->assertSee($rareItem->name)
+            ->assertSeeText('Урон')
+            ->assertSeeText('+6')
+            ->assertSeeText('Защита')
+            ->assertSeeText('+4')
             ->assertDontSee('Hidden Item')
             ->assertDontSee('Common Plate');
     }

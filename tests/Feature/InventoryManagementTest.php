@@ -237,7 +237,7 @@ class InventoryManagementTest extends TestCase
         $item = Item::factory()->potion()->create([
             'name' => 'Тактическая сыворотка',
             'description' => 'Восстанавливает бойца и ускоряет реакцию.',
-            'bonuses' => ['heal' => 25, 'agility' => 2],
+            'bonuses' => ['heal' => 25, 'agility' => 2, 'damage' => 4, 'defense' => 3],
             'duration_type' => 'consumable',
             'uses_count' => 3,
         ]);
@@ -247,12 +247,16 @@ class InventoryManagementTest extends TestCase
             'durability' => 3,
         ]));
 
-        foreach ([route('inventory'), route('entities.show', $creature)] as $url) {
+        foreach ([route('inventory'), route('entities.show', $creature), route('entities.equipment', $creature)] as $url) {
             $this->actingAs($user)
                 ->get($url)
                 ->assertOk()
                 ->assertSeeText('Тактическая сыворотка')
                 ->assertSeeText('Восстанавливает бойца и ускоряет реакцию.')
+                ->assertSeeText('Урон')
+                ->assertSeeText('+4')
+                ->assertSeeText('Защита')
+                ->assertSeeText('+3')
                 ->assertSeeText('Лечение')
                 ->assertSeeText('+25')
                 ->assertSeeText('Ловкость')

@@ -165,28 +165,15 @@
                                                 @endif
                                             </span>
                                         </div>
-                                        @if ($item->description)
-                                            <p class="shop-item-card__description">{{ $item->description }}</p>
-                                        @endif
                                     </div>
                                 </div>
 
-                                <dl class="shop-item-card__stats">
-                                    <div>
-                                        <dt class="text-xs text-zinc-500">Уровень</dt>
-                                        <dd class="mt-1 text-zinc-200">{{ $item->required_level }}</dd>
-                                    </div>
-                                    <div>
-                                        <dt class="text-xs text-zinc-500">Длительность</dt>
-                                        <dd class="mt-1 text-zinc-200">{{ \App\Models\Item::DURATIONS[$item->duration_type] ?? $item->duration_type }}</dd>
-                                    </div>
-                                    <div class="sm:col-span-2">
-                                        <dt class="text-xs text-zinc-500">Для каких сущностей</dt>
-                                        <dd class="mt-1 text-zinc-200">{{ $itemApplicability[$item->id] ?? 'Все типы сущностей' }}</dd>
-                                    </div>
-                                </dl>
-
-                                <x-item-effects :item="$item" :show-duration="false" class="shop-bonuses" />
+                                <x-item-details
+                                    :item="$item"
+                                    :applicability="$itemApplicability[$item->id] ?? 'Все типы сущностей'"
+                                    :price="$itemPrice"
+                                    class="mt-4"
+                                />
 
                                 @if (! $available)
                                     <p class="mt-4 text-sm text-amber-200">Недоступно по уровню игрока.</p>

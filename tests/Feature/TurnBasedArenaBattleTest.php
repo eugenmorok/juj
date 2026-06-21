@@ -257,7 +257,7 @@ class TurnBasedArenaBattleTest extends TestCase
         $item = Item::factory()->potion()->create([
             'name' => 'Battle Tonic',
             'description' => 'Restores health and temporarily increases strength.',
-            'bonuses' => ['heal' => 25, 'strength' => 3],
+            'bonuses' => ['heal' => 25, 'strength' => 3, 'damage' => 2, 'armor' => 1],
             'uses_count' => 1,
         ]);
         $itemInstance = ItemInstance::factory()->create([
@@ -273,6 +273,10 @@ class TurnBasedArenaBattleTest extends TestCase
             ->assertOk()
             ->assertSeeText('Battle Tonic')
             ->assertSeeText('Restores health and temporarily increases strength.')
+            ->assertSeeText('Урон')
+            ->assertSeeText('+2')
+            ->assertSeeText('Защита')
+            ->assertSeeText('+1')
             ->assertSeeText('Лечение')
             ->assertSeeText('+25')
             ->assertSeeText('Сила')

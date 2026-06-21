@@ -79,10 +79,12 @@
                                         <strong class="text-zinc-100">{{ $item->name }}</strong>
                                         <span class="text-xs text-emerald-300">{{ $inventoryItem->itemInstance->remainingUses() }} шт.</span>
                                     </div>
-                                    @if ($item->description)
-                                        <p class="mt-1 text-xs text-zinc-400">{{ $item->description }}</p>
-                                    @endif
-                                    <x-item-effects :item="$item" />
+                                    <x-item-details
+                                        :item="$item"
+                                        :inventory-item="$inventoryItem"
+                                        compact
+                                        class="mt-2"
+                                    />
                                 </article>
                             @endif
                         @endforeach

@@ -24,11 +24,11 @@
         @include('partials.rarity-badge', ['item' => $item])
     </div>
 
-    @if ($item->description)
-        <p class="mt-2 text-sm text-zinc-400">{{ $item->description }}</p>
-    @endif
-
-    <x-item-effects :item="$item" />
+    <x-item-details
+        :item="$item"
+        :inventory-item="$inventoryItem"
+        class="mt-3"
+    />
 
     @if (! $item->isEquipment())
         <p class="mt-3 text-xs text-zinc-500">Не является экипировкой.</p>
