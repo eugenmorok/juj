@@ -47,9 +47,20 @@ git diff --check
 
 ### Осталось
 
-- Выполнить `git diff --check`.
-- Закоммитить и запушить изменения.
-- Fast-forward `main` и развернуть production.
+- Основная задача завершена и опубликована.
+
+### Production
+
+- Изменения опубликованы коммитами:
+  - `f31ae7e` — полные характеристики предметов во всех интерфейсах;
+  - `31ba25e` — ширина магазина 85% и базовый лор мира Арены.
+- `main` fast-forward обновлён до `31ba25e` и запушен в GitHub.
+- Production `/var/www/rpg-arena` обновлён до `31ba25e`, рабочее дерево чистое.
+- Новых миграций не было; `php artisan migrate --force` вернул `Nothing to migrate`.
+- Production-сборка Vite выполнена успешно; остаётся прежний warning Vite про `/game-assets/shop/merchant-hall.webp`.
+- Laravel cache warmup выполнен: `config:cache`, `route:cache`, `view:cache`.
+- `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны.
+- `http://176.108.254.117/login` возвращает HTTP 200.
 
 ## 2026-06-21 — полные характеристики предметов во всех интерфейсах
 
