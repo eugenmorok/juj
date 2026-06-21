@@ -30,7 +30,7 @@ git diff --check
 
 ### Осталось
 
-- Закоммитить, запушить и выполнить production deploy.
+- Основная задача завершена и опубликована.
 
 ### Текущие результаты
 
@@ -44,6 +44,17 @@ git diff --check
   - карточки магазина содержат 74 `item-details__tile`;
   - старый тёмный класс `bg-zinc-950/60` отсутствует;
   - пример мета-плитки `Тип / Экипировка`: фон светлый, текст тёмный и читаемый.
+
+### Production
+
+- Кодовая правка опубликована коммитом `1e3731d` (`Improve shop item readability in light theme`) и запушена в `main`.
+- Production `/var/www/rpg-arena` fast-forward обновлён до `1e3731d`.
+- `composer install --no-dev --optimize-autoloader`, `php artisan optimize:clear`, `php artisan migrate --force`, `npm run build`, `config:cache`, `route:cache`, `view:cache` выполнены успешно.
+- Новых миграций не было: `Nothing to migrate`.
+- Production build Vite успешен; остаётся прежний warning про `/game-assets/shop/merchant-hall.webp`.
+- `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны.
+- `http://176.108.254.117/login` возвращает HTTP 200.
+- В production CSS найден `item-details__tile`, значит новая тема-зависимая стилизация предметов доставлена.
 
 ## 2026-06-21 — магазин 85% и базовый лор мира Арены
 
