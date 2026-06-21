@@ -42,6 +42,9 @@ class UsersTable
                 TextColumn::make('creature_creation_points')
                     ->label('Очки создания')
                     ->sortable(),
+                TextColumn::make('doctrine_state')
+                    ->label('Доктрина')
+                    ->state(fn (User $record): string => "св. {$record->doctrine_points} / потрач. {$record->doctrinePointsSpent()}"),
                 TextColumn::make('inventory_state')
                     ->label('Инвентарь')
                     ->state(function (User $record): string {

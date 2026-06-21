@@ -947,8 +947,8 @@ class InteractiveBattleService
         $bonuses = $participant->creature->equipmentBonuses();
         $damageBase = Creature::damageFromSpecial($special);
         $defenseBase = Creature::defenseFromSpecial($special, $guarded);
-        $damageBonus = Creature::damageBonusFromBonuses($bonuses);
-        $defenseBonus = Creature::defenseBonusFromBonuses($bonuses);
+        $damageBonus = Creature::applyEquipmentCombatMastery(Creature::damageBonusFromBonuses($bonuses), $participant->creature->user);
+        $defenseBonus = Creature::applyEquipmentCombatMastery(Creature::defenseBonusFromBonuses($bonuses), $participant->creature->user);
 
         return [
             'damage_base' => $damageBase,

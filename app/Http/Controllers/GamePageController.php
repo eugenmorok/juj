@@ -30,6 +30,14 @@ class GamePageController extends Controller
         );
     }
 
+    public function increaseDoctrine(Request $request, string $attribute, PlayerProgressService $progress): RedirectResponse
+    {
+        $user = $progress->increaseDoctrineAttribute($request->user(), $attribute);
+        $label = $user::DOCTRINE_ATTRIBUTES[$attribute]['label'] ?? $attribute;
+
+        return back()->with('status', "Доктрина улучшена: {$label}.");
+    }
+
     public function inventory(Request $request): View
     {
         return view('game.inventory', [

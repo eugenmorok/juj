@@ -143,8 +143,8 @@ class BattleEngine
         $maxHp = max(1, 50 + ($special['endurance'] * 10) + ($creature->level * 5) + (int) ($bonuses['hp'] ?? 0));
         $damageBase = Creature::damageFromSpecial($special);
         $defenseBase = Creature::defenseFromSpecial($special);
-        $damageBonus = Creature::damageBonusFromBonuses($bonuses);
-        $defenseBonus = Creature::defenseBonusFromBonuses($bonuses);
+        $damageBonus = Creature::applyEquipmentCombatMastery(Creature::damageBonusFromBonuses($bonuses), $creature->user);
+        $defenseBonus = Creature::applyEquipmentCombatMastery(Creature::defenseBonusFromBonuses($bonuses), $creature->user);
 
         return [
             'creature' => $creature,

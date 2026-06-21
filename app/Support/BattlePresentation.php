@@ -29,6 +29,8 @@ final class BattlePresentation
         $bonuses = $creature?->equipmentBonuses() ?? [];
         $damageBase = Creature::damageFromSpecial($special);
         $defenseBase = Creature::defenseFromSpecial($special);
+        $damageBonus = Creature::applyEquipmentCombatMastery(Creature::damageBonusFromBonuses($bonuses), $creature?->user);
+        $defenseBonus = Creature::applyEquipmentCombatMastery(Creature::defenseBonusFromBonuses($bonuses), $creature?->user);
 
         return [
             'participant_id' => $participant->id,
@@ -43,8 +45,8 @@ final class BattlePresentation
             'species_name' => $creature?->species?->name,
             'special' => $special,
             'combat' => [
-                'damage' => max(1, $damageBase + Creature::damageBonusFromBonuses($bonuses)),
-                'defense' => max(0, $defenseBase + Creature::defenseBonusFromBonuses($bonuses)),
+                'damage' => max(1, $damageBase + $damageBonus),
+                'defense' => max(0, $defenseBase + $defenseBonus),
             ],
             'spritesheet_image_url' => MediaUrl::resolve($creature?->species?->battle_spritesheet_image),
             'spritesheet_data_url' => MediaUrl::resolve($creature?->species?->battle_spritesheet_data),

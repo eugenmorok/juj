@@ -26,7 +26,7 @@ class PlayerProgressService
     }
 
     /**
-     * @return array{player_xp: int, creation_points: int, level_before: int, level_after: int}
+     * @return array{player_xp: int, creation_points: int, doctrine_points: int, level_before: int, level_after: int}
      */
     public function applyBattleProgress(
         User $user,
@@ -40,6 +40,7 @@ class PlayerProgressService
             return [
                 'player_xp' => 0,
                 'creation_points' => 0,
+                'doctrine_points' => 0,
                 'level_before' => $user->level,
                 'level_after' => $user->level,
             ];
@@ -47,7 +48,7 @@ class PlayerProgressService
 
         $levelBefore = $user->level;
         $playerXp = $this->battleXp($result, $opponentLevel, $rewardMultiplier);
-        $creationPoints = $this->creationPointDrop($result, $opponentLevel, $rewardMultiplier, $battleSeed, $participantId);
+        $creationPoints = $this->creationPointDrop($user, $result, $opponentLevel, $rewardMultiplier, $battleSeed, $participantId);
         $level = $user->level;
         $xp = $user->xp + $playerXp;
 
@@ -56,10 +57,16 @@ class PlayerProgressService
             $level++;
         }
 
+        $doctrinePoints = max(
+            0,
+            User::doctrinePointsEarnedForLevel($level) - User::doctrinePointsEarnedForLevel($levelBefore),
+        );
+
         $user->forceFill([
             'level' => $level,
             'xp' => $xp,
             'creature_creation_points' => $user->creature_creation_points + $creationPoints,
+            'doctrine_points' => $user->doctrine_points + $doctrinePoints,
         ])->save();
 
         Inventory::forUser($user->refresh())->syncSlots();
@@ -67,6 +74,7 @@ class PlayerProgressService
         return [
             'player_xp' => $playerXp,
             'creation_points' => $creationPoints,
+            'doctrine_points' => $doctrinePoints,
             'level_before' => $levelBefore,
             'level_after' => $level,
         ];
@@ -109,6 +117,51 @@ class PlayerProgressService
         });
     }
 
+    public function increaseDoctrineAttribute(User $user, string $attribute): User
+    {
+        if (! array_key_exists($attribute, User::DOCTRINE_ATTRIBUTES)) {
+            throw ValidationException::withMessages([
+                'attribute' => 'Неизвестное направление доктрины.',
+            ]);
+        }
+
+        return DB::transaction(function () use ($user, $attribute): User {
+            $lockedUser = User::query()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedUser->is_bot) {
+                throw ValidationException::withMessages([
+                    'attribute' => 'Боты не используют доктрину игрока.',
+                ]);
+            }
+
+            if ($lockedUser->doctrine_points < 1) {
+                throw ValidationException::withMessages([
+                    'attribute' => 'Нет свободных очков доктрины.',
+                ]);
+            }
+
+            $column = User::DOCTRINE_ATTRIBUTES[$attribute]['column'];
+
+            if ((int) $lockedUser->{$column} >= User::MAX_DOCTRINE_ATTRIBUTE) {
+                throw ValidationException::withMessages([
+                    'attribute' => 'Это направление уже достигло текущего максимума.',
+                ]);
+            }
+
+            $lockedUser->forceFill([
+                'doctrine_points' => $lockedUser->doctrine_points - 1,
+                $column => (int) $lockedUser->{$column} + 1,
+            ])->save();
+
+            Inventory::forUser($lockedUser->refresh())->syncSlots();
+
+            return $lockedUser;
+        });
+    }
+
     private function battleXp(?string $result, int $opponentLevel, float $rewardMultiplier): int
     {
         $base = match ($result) {
@@ -120,13 +173,14 @@ class PlayerProgressService
         return max(1, (int) floor($base * max(1, $opponentLevel) * $rewardMultiplier));
     }
 
-    private function creationPointDrop(?string $result, int $opponentLevel, float $rewardMultiplier, int $battleSeed, int $participantId): int
+    private function creationPointDrop(User $user, ?string $result, int $opponentLevel, float $rewardMultiplier, int $battleSeed, int $participantId): int
     {
         if ($result !== BattleParticipant::RESULT_WIN) {
             return 0;
         }
 
-        $chance = min(40, max(5, 5 + (max(1, $opponentLevel) * 3) + (int) round(($rewardMultiplier - 1) * 10)));
+        $breedingBonus = $user->creationPointRewardBonusPercent();
+        $chance = min(55, max(5, 5 + (max(1, $opponentLevel) * 3) + (int) round(($rewardMultiplier - 1) * 10) + intdiv($breedingBonus, 2)));
         $roll = $this->deterministicRoll($battleSeed, $participantId, 'creation-point-drop', 1, 100);
 
         if ($roll > $chance) {
@@ -135,7 +189,9 @@ class PlayerProgressService
 
         $amountRoll = $this->deterministicRoll($battleSeed, $participantId, 'creation-point-amount', 0, 6);
 
-        return min(40, 8 + (max(1, $opponentLevel) * 2) + $amountRoll);
+        $amount = 8 + (max(1, $opponentLevel) * 2) + $amountRoll;
+
+        return min(55, (int) floor($amount * (100 + $breedingBonus) / 100));
     }
 
     private function deterministicRoll(int $battleSeed, int $participantId, string $salt, int $min, int $max): int

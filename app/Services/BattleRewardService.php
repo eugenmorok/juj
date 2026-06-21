@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\ArenaSetting;
 use App\Models\Battle;
 use App\Models\BattleParticipant;
 use App\Models\Creature;
-use App\Models\ArenaSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -45,7 +45,6 @@ class BattleRewardService
                 $multiplier = $this->rewardMultiplier($battle, $participant, $opponent, $settings);
                 $rewardXp = (int) floor($baseRewards['xp'] * $multiplier);
                 $rewardDevelopmentPoints = (int) floor($baseRewards['development_points'] * $multiplier);
-                $rewardTokens = (int) floor($baseRewards['tokens'] * $multiplier);
                 $opponentLevel = max(1, $opponent->level_before);
 
                 $user = User::query()
@@ -56,6 +55,7 @@ class BattleRewardService
                     ->whereKey($participant->creature_id)
                     ->lockForUpdate()
                     ->firstOrFail();
+                $rewardTokens = (int) floor($baseRewards['tokens'] * $multiplier * $user->tokenRewardMultiplier());
 
                 $levelBefore = $creature->level;
                 $playerProgress = $this->playerProgress->applyBattleProgress(
@@ -206,7 +206,12 @@ class BattleRewardService
     private function rewardEvent(Battle $battle): void
     {
         $lines = $battle->participants
-            ->map(fn (BattleParticipant $participant): string => "{$participant->creature->name}: +{$participant->reward_xp} XP сущности, +{$participant->reward_player_xp} XP игрока, +{$participant->reward_development_points} очков развития, +{$participant->reward_tokens} токенов, +{$participant->reward_creation_points} очков создания.")
+            ->map(function (BattleParticipant $participant): string {
+                $doctrinePoints = $this->rewardDoctrinePoints($participant);
+                $doctrineText = $doctrinePoints > 0 ? ", +{$doctrinePoints} очков доктрины" : '';
+
+                return "{$participant->creature->name}: +{$participant->reward_xp} XP сущности, +{$participant->reward_player_xp} XP игрока, +{$participant->reward_development_points} очков развития, +{$participant->reward_tokens} токенов, +{$participant->reward_creation_points} очков создания{$doctrineText}.";
+            })
             ->implode(' ');
 
         $battle->events()->create([
@@ -221,6 +226,7 @@ class BattleRewardService
                         'reward_tokens' => $participant->reward_tokens,
                         'reward_development_points' => $participant->reward_development_points,
                         'reward_creation_points' => $participant->reward_creation_points,
+                        'reward_doctrine_points' => $this->rewardDoctrinePoints($participant),
                         'reward_multiplier' => $participant->reward_multiplier,
                     ])
                     ->values()
@@ -228,5 +234,18 @@ class BattleRewardService
             ],
             'text_log' => 'Награды начислены. '.$lines,
         ]);
+    }
+
+    private function rewardDoctrinePoints(BattleParticipant $participant): int
+    {
+        if ($participant->player_level_before === null || $participant->player_level_after === null) {
+            return 0;
+        }
+
+        return max(
+            0,
+            User::doctrinePointsEarnedForLevel((int) $participant->player_level_after)
+            - User::doctrinePointsEarnedForLevel((int) $participant->player_level_before),
+        );
     }
 }

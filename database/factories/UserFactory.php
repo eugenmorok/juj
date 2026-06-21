@@ -33,6 +33,12 @@ class UserFactory extends Factory
             'xp' => 0,
             'tokens' => 0,
             'creature_creation_points' => 100,
+            'doctrine_points' => 0,
+            'doctrine_tactic' => 0,
+            'doctrine_command' => 0,
+            'doctrine_engineering' => 0,
+            'doctrine_breeding' => 0,
+            'doctrine_trade' => 0,
             'inventory_slots' => 5,
             'is_bot' => false,
             'is_admin' => false,
@@ -68,6 +74,12 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'is_bot' => true,
             'creature_creation_points' => 0,
+            'doctrine_points' => 0,
+            'doctrine_tactic' => 0,
+            'doctrine_command' => 0,
+            'doctrine_engineering' => 0,
+            'doctrine_breeding' => 0,
+            'doctrine_trade' => 0,
         ]);
     }
 }

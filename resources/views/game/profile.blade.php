@@ -4,6 +4,7 @@
     @php
         $xpToNextLevel = \App\Services\PlayerProgressService::xpToNextLevel($user->level);
         $support = $user->battleSupportBonus();
+        $doctrineAttributes = $user->doctrineAttributes();
     @endphp
 
     <div class="space-y-6">
@@ -18,7 +19,7 @@
             </span>
         </div>
 
-        <section class="grid gap-4 md:grid-cols-4">
+        <section class="grid gap-4 md:grid-cols-5">
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Уровень</div>
                 <div class="mt-2 text-3xl font-semibold text-white">{{ $user->level }}</div>
@@ -30,6 +31,10 @@
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Очки создания</div>
                 <div class="mt-2 text-3xl font-semibold text-white">{{ $user->creature_creation_points }}</div>
+            </div>
+            <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+                <div class="text-sm text-zinc-400">Очки доктрины</div>
+                <div class="mt-2 text-3xl font-semibold text-white">{{ $user->doctrine_points }}</div>
             </div>
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
                 <div class="text-sm text-zinc-400">Скидка магазина</div>
@@ -47,7 +52,7 @@
                 ])
                 <p class="mt-3 text-sm text-zinc-400">
                     Следующий уровень: {{ $xpToNextLevel }} XP. Уровень игрока повышает вместимость общего инвентаря,
-                    дает скидку в магазине и командные бонусы всем твоим сущностям в бою.
+                    дает скидку в магазине, открывает очки доктрины и командные бонусы всем твоим сущностям в бою.
                 </p>
             </div>
 
@@ -75,6 +80,49 @@
         </section>
 
         <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 class="font-semibold text-white">Доктрина игрока</h2>
+                    <p class="mt-2 text-sm text-zinc-400">
+                        Доктрина — это стиль управления всеми сущностями. Очки выдаются за уровни игрока:
+                        по одному за уровень и дополнительное очко на каждом пятом уровне.
+                    </p>
+                </div>
+                <div class="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+                    Свободно: <strong>{{ $user->doctrine_points }}</strong>
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                @foreach (\App\Models\User::DOCTRINE_ATTRIBUTES as $attribute => $meta)
+                    @php
+                        $value = $doctrineAttributes[$attribute] ?? 0;
+                    @endphp
+                    <article class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-white">{{ $meta['label'] }}</div>
+                                <div class="text-xs uppercase text-zinc-500">{{ $meta['short'] }}</div>
+                            </div>
+                            <div class="text-2xl font-semibold text-emerald-100">{{ $value }}</div>
+                        </div>
+                        <p class="mt-3 min-h-12 text-xs text-zinc-400">{{ $meta['description'] }}</p>
+                        <form method="POST" action="{{ route('profile.doctrine.increase', $attribute) }}" class="mt-4">
+                            @csrf
+                            <button
+                                type="submit"
+                                class="w-full rounded-md border border-emerald-500/40 px-3 py-2 text-sm font-medium text-emerald-100 hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:border-zinc-800 disabled:text-zinc-600"
+                                @disabled($user->doctrine_points < 1 || $value >= \App\Models\User::MAX_DOCTRINE_ATTRIBUTE)
+                            >
+                                Вложить очко
+                            </button>
+                        </form>
+                    </article>
+                @endforeach
+            </div>
+        </section>
+
+        <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
             <h2 class="font-semibold text-white">Преимущества уровня игрока</h2>
             <div class="mt-4 grid gap-3 md:grid-cols-3">
                 <div class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
@@ -84,6 +132,8 @@
                 <div class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
                     <div class="text-sm text-zinc-400">Тактическая поддержка</div>
                     <div class="mt-2 flex flex-wrap gap-2 text-sm">
+                        <span class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-200">A +{{ $support['agility'] }}</span>
+                        <span class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-200">E +{{ $support['endurance'] }}</span>
                         <span class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-200">P +{{ $support['perception'] }}</span>
                         <span class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-200">C +{{ $support['charisma'] }}</span>
                         <span class="rounded-md border border-zinc-700 px-2 py-1 text-zinc-200">I +{{ $support['intelligence'] }}</span>
@@ -94,6 +144,23 @@
                     <div class="mt-1 text-xl font-semibold text-white">
                         {{ $user->canCreateCreature() ? 'Доступна' : 'Нужно еще '.max(0, \App\Models\User::CREATURE_CREATION_COST - $user->creature_creation_points) }}
                     </div>
+                </div>
+            </div>
+            <div class="mt-4 grid gap-3 md:grid-cols-3">
+                <div class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+                    <div class="text-sm text-zinc-400">Инженерия предметов</div>
+                    <div class="mt-1 text-xl font-semibold text-white">+{{ $user->equipmentCombatBonusPercent() }}%</div>
+                    <p class="mt-1 text-xs text-zinc-500">К прямым бонусам Урона и Защиты от экипировки.</p>
+                </div>
+                <div class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+                    <div class="text-sm text-zinc-400">Селекция</div>
+                    <div class="mt-1 text-xl font-semibold text-white">+{{ $user->creationPointRewardBonusPercent() }}%</div>
+                    <p class="mt-1 text-xs text-zinc-500">К шансу и размеру добычи очков создания за победы.</p>
+                </div>
+                <div class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+                    <div class="text-sm text-zinc-400">Торговля</div>
+                    <div class="mt-1 text-xl font-semibold text-white">+{{ $user->tokenRewardBonusPercent() }}%</div>
+                    <p class="mt-1 text-xs text-zinc-500">К жетонам за бой; скидка магазина уже показана выше.</p>
                 </div>
             </div>
         </section>

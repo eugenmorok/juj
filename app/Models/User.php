@@ -22,6 +22,12 @@ use Illuminate\Notifications\Notifiable;
     'xp',
     'tokens',
     'creature_creation_points',
+    'doctrine_points',
+    'doctrine_tactic',
+    'doctrine_command',
+    'doctrine_engineering',
+    'doctrine_breeding',
+    'doctrine_trade',
     'inventory_slots',
     'is_bot',
     'is_admin',
@@ -36,9 +42,46 @@ class User extends Authenticatable implements FilamentUser
 
     public const CREATURE_CREATION_POINT_XP_COST = 1;
 
-    public const MAX_SHOP_DISCOUNT_PERCENT = 20;
+    public const MAX_DOCTRINE_ATTRIBUTE = 20;
 
-    public const MAX_BATTLE_SUPPORT_BONUS = 6;
+    public const MAX_SHOP_DISCOUNT_PERCENT = 25;
+
+    public const MAX_BATTLE_SUPPORT_BONUS = 8;
+
+    public const MAX_SECONDARY_BATTLE_SUPPORT_BONUS = 4;
+
+    public const DOCTRINE_ATTRIBUTES = [
+        'tactic' => [
+            'column' => 'doctrine_tactic',
+            'label' => 'Тактика',
+            'short' => 'Так',
+            'description' => 'Точность, чтение противника и скорость боевых решений.',
+        ],
+        'command' => [
+            'column' => 'doctrine_command',
+            'label' => 'Командование',
+            'short' => 'Ком',
+            'description' => 'Мораль, устойчивость и способность держать строй.',
+        ],
+        'engineering' => [
+            'column' => 'doctrine_engineering',
+            'label' => 'Инженерия',
+            'short' => 'Инж',
+            'description' => 'Работа с экипировкой, защитой, модулями и общим инвентарём.',
+        ],
+        'breeding' => [
+            'column' => 'doctrine_breeding',
+            'label' => 'Селекция',
+            'short' => 'Сел',
+            'description' => 'Разведение, подготовка новых сущностей и очки создания.',
+        ],
+        'trade' => [
+            'column' => 'doctrine_trade',
+            'label' => 'Торговля',
+            'short' => 'Торг',
+            'description' => 'Скидки, жетоны и эффективность экономики арены.',
+        ],
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -54,6 +97,12 @@ class User extends Authenticatable implements FilamentUser
             'xp' => 'integer',
             'tokens' => 'integer',
             'creature_creation_points' => 'integer',
+            'doctrine_points' => 'integer',
+            'doctrine_tactic' => 'integer',
+            'doctrine_command' => 'integer',
+            'doctrine_engineering' => 'integer',
+            'doctrine_breeding' => 'integer',
+            'doctrine_trade' => 'integer',
             'inventory_slots' => 'integer',
             'is_bot' => 'boolean',
             'is_admin' => 'boolean',
@@ -67,7 +116,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function inventoryCapacity(): int
     {
-        $baseSlots = 5 + ($this->level * 2);
+        $baseSlots = 5 + ($this->level * 2) + $this->engineeringInventoryBonus();
         $purchasedSlots = max(0, $this->inventory_slots - 5);
 
         return $baseSlots + $purchasedSlots;
@@ -82,7 +131,7 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->is_bot
             ? 0
-            : min(self::MAX_SHOP_DISCOUNT_PERCENT, max(0, $this->level - 1));
+            : min(self::MAX_SHOP_DISCOUNT_PERCENT, max(0, $this->level - 1) + $this->doctrine_trade);
     }
 
     /**
@@ -92,6 +141,8 @@ class User extends Authenticatable implements FilamentUser
     {
         if ($this->is_bot) {
             return [
+                'agility' => 0,
+                'endurance' => 0,
                 'perception' => 0,
                 'charisma' => 0,
                 'intelligence' => 0,
@@ -99,10 +150,76 @@ class User extends Authenticatable implements FilamentUser
         }
 
         return [
-            'perception' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 4)),
-            'charisma' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 3)),
-            'intelligence' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 5)),
+            'agility' => min(self::MAX_SECONDARY_BATTLE_SUPPORT_BONUS, intdiv($this->doctrine_tactic, 4)),
+            'endurance' => min(self::MAX_SECONDARY_BATTLE_SUPPORT_BONUS, intdiv($this->doctrine_command, 4)),
+            'perception' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 4) + intdiv($this->doctrine_tactic, 2)),
+            'charisma' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 3) + intdiv($this->doctrine_command, 2)),
+            'intelligence' => min(self::MAX_BATTLE_SUPPORT_BONUS, intdiv(max(0, $this->level - 1), 5) + intdiv($this->doctrine_engineering, 2)),
         ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function doctrineAttributes(): array
+    {
+        return collect(self::DOCTRINE_ATTRIBUTES)
+            ->mapWithKeys(fn (array $meta, string $attribute): array => [
+                $attribute => (int) $this->{$meta['column']},
+            ])
+            ->all();
+    }
+
+    public function doctrinePointsSpent(): int
+    {
+        return array_sum($this->doctrineAttributes());
+    }
+
+    public static function doctrinePointsEarnedForLevel(int $level): int
+    {
+        $level = max(1, $level);
+
+        return max(0, $level - 1) + intdiv($level, 5);
+    }
+
+    public function doctrinePointsEarned(): int
+    {
+        return self::doctrinePointsEarnedForLevel($this->level);
+    }
+
+    public function doctrinePointsTotal(): int
+    {
+        return $this->doctrine_points + $this->doctrinePointsSpent();
+    }
+
+    public function creationPointRewardBonusPercent(): int
+    {
+        return $this->is_bot ? 0 : min(30, $this->doctrine_breeding * 3);
+    }
+
+    public function tokenRewardBonusPercent(): int
+    {
+        return $this->is_bot ? 0 : min(30, $this->doctrine_trade * 3);
+    }
+
+    public function tokenRewardMultiplier(): float
+    {
+        return 1 + ($this->tokenRewardBonusPercent() / 100);
+    }
+
+    public function equipmentCombatBonusPercent(): int
+    {
+        return $this->is_bot ? 0 : min(20, $this->doctrine_engineering * 2);
+    }
+
+    public function equipmentCombatBonusMultiplier(): float
+    {
+        return 1 + ($this->equipmentCombatBonusPercent() / 100);
+    }
+
+    private function engineeringInventoryBonus(): int
+    {
+        return $this->is_bot ? 0 : intdiv($this->doctrine_engineering, 2);
     }
 
     public function botStrengthPercent(?ArenaSetting $settings = null): int

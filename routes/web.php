@@ -1,10 +1,10 @@
 <?php
 
+use App\Http\Controllers\ArenaChallengeController;
+use App\Http\Controllers\ArenaController;
+use App\Http\Controllers\ArenaMatchmakingController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
-use App\Http\Controllers\ArenaController;
-use App\Http\Controllers\ArenaChallengeController;
-use App\Http\Controllers\ArenaMatchmakingController;
 use App\Http\Controllers\BattleMessageController;
 use App\Http\Controllers\BattleReplayController;
 use App\Http\Controllers\BattleStateController;
@@ -12,8 +12,8 @@ use App\Http\Controllers\CreatureController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\GamePageController;
-use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InteractiveBattleActionController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [GamePageController::class, 'profile'])->name('profile');
     Route::post('/profile/creation-points/convert', [GamePageController::class, 'convertCreationPoints'])->name('profile.creation-points.convert');
+    Route::post('/profile/doctrine/{attribute}', [GamePageController::class, 'increaseDoctrine'])->name('profile.doctrine.increase');
     Route::get('/entities', [CreatureController::class, 'index'])->name('entities.index');
     Route::get('/entities/create', [CreatureController::class, 'create'])->name('entities.create');
     Route::post('/entities', [CreatureController::class, 'store'])->name('entities.store');

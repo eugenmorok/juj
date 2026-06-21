@@ -23,11 +23,12 @@ class PowerScoreService
         $skillScore = $creature->skills->sum(
             fn ($skill): int => (int) ($skill->pivot?->cost_paid ?: $skill->cost)
         ) * $settings->power_score_skill_weight;
+        $equipmentMasteryMultiplier = $creature->user?->equipmentCombatBonusMultiplier() ?? 1.0;
         $equipmentScore = $creature->equipmentRows
             ->pluck('itemInstance')
             ->filter()
             ->unique('id')
-            ->sum(fn (ItemInstance $itemInstance): int => $this->itemInstanceScore($itemInstance)) * $settings->power_score_equipment_weight;
+            ->sum(fn (ItemInstance $itemInstance): int => $this->itemInstanceScore($itemInstance)) * $equipmentMasteryMultiplier * $settings->power_score_equipment_weight;
 
         return max(1, (int) round($specialScore + $levelScore + $skillScore + $equipmentScore));
     }

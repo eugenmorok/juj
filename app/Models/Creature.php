@@ -245,8 +245,8 @@ class Creature extends Model
         $bonuses = $this->equipmentBonuses();
         $damageBase = self::damageFromSpecial($special);
         $defenseBase = self::defenseFromSpecial($special);
-        $damageBonus = self::damageBonusFromBonuses($bonuses);
-        $defenseBonus = self::defenseBonusFromBonuses($bonuses);
+        $damageBonus = self::applyEquipmentCombatMastery(self::damageBonusFromBonuses($bonuses), $this->user);
+        $defenseBonus = self::applyEquipmentCombatMastery(self::defenseBonusFromBonuses($bonuses), $this->user);
 
         return [
             'damage' => [
@@ -309,6 +309,15 @@ class Creature extends Model
     {
         return collect($keys)
             ->sum(fn (string $key): int => is_numeric($bonuses[$key] ?? null) ? (int) $bonuses[$key] : 0);
+    }
+
+    public static function applyEquipmentCombatMastery(int $bonus, ?User $user): int
+    {
+        if ($bonus <= 0 || ! $user || $user->is_bot) {
+            return $bonus;
+        }
+
+        return max($bonus, (int) round($bonus * $user->equipmentCombatBonusMultiplier()));
     }
 
     /**
