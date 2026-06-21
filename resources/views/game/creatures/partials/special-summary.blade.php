@@ -1,6 +1,7 @@
 @php
     $equipmentBonuses = $creature->equipmentBonuses();
     $effectiveSpecial = $creature->effectiveSpecialValues();
+    $combatStats = $creature->effectiveCombatStats();
 @endphp
 
 <section class="rounded-md border border-zinc-800 bg-zinc-900 p-5">
@@ -9,6 +10,56 @@
         <span class="rounded-md border border-zinc-800 px-3 py-1 text-sm text-zinc-300">
             HP {{ $creature->current_hp }}/{{ $creature->effectiveMaxHp() }}
         </span>
+    </div>
+
+    <div class="mt-4 grid gap-3 md:grid-cols-2">
+        <div class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+            <div class="flex items-center justify-between gap-3">
+                <h3 class="font-semibold text-white">Урон</h3>
+                <span class="text-2xl font-semibold text-rose-100">{{ $combatStats['damage']['total'] }}</span>
+            </div>
+            <dl class="mt-3 grid grid-cols-3 gap-2 text-xs text-zinc-400">
+                <div>
+                    <dt>От SPECIAL</dt>
+                    <dd class="mt-1 text-sm font-semibold text-zinc-100">{{ $combatStats['damage']['base'] }}</dd>
+                </div>
+                <div>
+                    <dt>Предметы</dt>
+                    <dd class="mt-1 text-sm font-semibold {{ $combatStats['damage']['equipment'] >= 0 ? 'text-emerald-200' : 'text-rose-200' }}">
+                        {{ $combatStats['damage']['equipment'] >= 0 ? '+' : '' }}{{ $combatStats['damage']['equipment'] }}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Итог</dt>
+                    <dd class="mt-1 text-sm font-semibold text-white">{{ $combatStats['damage']['total'] }}</dd>
+                </div>
+            </dl>
+            <p class="mt-3 text-xs text-zinc-500">База зависит от S, A и I; оружие может добавлять прямой бонус к урону.</p>
+        </div>
+
+        <div class="rounded-md border border-zinc-800 bg-zinc-950 p-4">
+            <div class="flex items-center justify-between gap-3">
+                <h3 class="font-semibold text-white">Защита</h3>
+                <span class="text-2xl font-semibold text-sky-100">{{ $combatStats['defense']['total'] }}</span>
+            </div>
+            <dl class="mt-3 grid grid-cols-3 gap-2 text-xs text-zinc-400">
+                <div>
+                    <dt>От SPECIAL</dt>
+                    <dd class="mt-1 text-sm font-semibold text-zinc-100">{{ $combatStats['defense']['base'] }}</dd>
+                </div>
+                <div>
+                    <dt>Предметы</dt>
+                    <dd class="mt-1 text-sm font-semibold {{ $combatStats['defense']['equipment'] >= 0 ? 'text-emerald-200' : 'text-rose-200' }}">
+                        {{ $combatStats['defense']['equipment'] >= 0 ? '+' : '' }}{{ $combatStats['defense']['equipment'] }}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Итог</dt>
+                    <dd class="mt-1 text-sm font-semibold text-white">{{ $combatStats['defense']['total'] }}</dd>
+                </div>
+            </dl>
+            <p class="mt-3 text-xs text-zinc-500">База зависит от E, C и I; броня и щиты могут добавлять прямой бонус к защите.</p>
+        </div>
     </div>
 
     <div class="mt-4 overflow-x-auto">

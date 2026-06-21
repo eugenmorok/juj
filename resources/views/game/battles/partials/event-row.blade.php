@@ -89,13 +89,19 @@
 
     <p class="battle-event-row__text">{{ $event->text_log }}</p>
 
-    @if (array_key_exists('attack_zone', $payload) || array_key_exists('hit_chance', $payload) || ! empty($payload['special']))
+    @if (array_key_exists('attack_zone', $payload) || array_key_exists('hit_chance', $payload) || array_key_exists('attack_rating', $payload) || array_key_exists('defense_rating', $payload) || ! empty($payload['special']))
         <div class="battle-event-row__details">
             @if (array_key_exists('attack_zone', $payload))
                 <span>Зона: {{ $zoneLabels[$payload['attack_zone']] ?? $payload['attack_zone'] }}</span>
             @endif
             @if (array_key_exists('hit_chance', $payload))
                 <span>Шанс: {{ $payload['hit_chance'] }}%</span>
+            @endif
+            @if (array_key_exists('attack_rating', $payload))
+                <span>Урон: {{ $payload['attack_rating'] }}</span>
+            @endif
+            @if (array_key_exists('defense_rating', $payload))
+                <span>Защита: {{ $payload['defense_rating'] }}</span>
             @endif
             @if (! empty($payload['special']))
                 @foreach ($payload['special'] as $attribute => $value)

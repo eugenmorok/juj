@@ -66,6 +66,8 @@
                         <b data-battle-hud-hp-text>{{ $participant['hp_after'] }}/{{ $participant['hp_before'] }}</b>
                     </div>
                     <div class="battle-fighter-hud__special">
+                        <span title="Урон"><b>УРН</b>{{ $participant['combat']['damage'] ?? 0 }}</span>
+                        <span title="Защита"><b>ЗАЩ</b>{{ $participant['combat']['defense'] ?? 0 }}</span>
                         @foreach ($participant['special'] as $attribute => $value)
                             <span title="{{ $attribute }}"><b>{{ $specialLabels[$attribute] ?? strtoupper(substr($attribute, 0, 1)) }}</b>{{ $value }}</span>
                         @endforeach

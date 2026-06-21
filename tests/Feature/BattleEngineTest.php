@@ -98,6 +98,74 @@ class BattleEngineTest extends TestCase
         $this->assertGreaterThan($baseScore + 25, $powerScore->calculate($creature->refresh()));
     }
 
+    public function test_creature_damage_and_defense_are_derived_from_special_and_equipment(): void
+    {
+        $creature = $this->creatureFor(User::factory()->create());
+        $slot = EquipmentSlot::factory()->create(['code' => 'combat-kit']);
+        $item = Item::factory()->create([
+            'slot_key' => $slot->code,
+            'slots_required' => [$slot->code],
+            'bonuses' => ['damage' => 6, 'defense' => 4],
+        ]);
+        $itemInstance = ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $creature->user_id,
+            'bound_creature_id' => $creature->id,
+            'state' => 'equipped',
+        ]);
+        CreatureEquipment::query()->create([
+            'creature_id' => $creature->id,
+            'item_instance_id' => $itemInstance->id,
+            'slot_key' => $slot->code,
+        ]);
+
+        $stats = $creature->refresh()->effectiveCombatStats();
+
+        $this->assertSame(28, $stats['damage']['base']);
+        $this->assertSame(6, $stats['damage']['equipment']);
+        $this->assertSame(34, $stats['damage']['total']);
+        $this->assertSame(8, $stats['defense']['base']);
+        $this->assertSame(4, $stats['defense']['equipment']);
+        $this->assertSame(12, $stats['defense']['total']);
+    }
+
+    public function test_automatic_battle_payload_exposes_damage_and_defense_ratings(): void
+    {
+        $attacker = $this->creatureFor(User::factory()->create(), [
+            'name' => 'Rating Attacker',
+            'strength' => 30,
+            'perception' => 30,
+            'intelligence' => 15,
+            'agility' => 20,
+        ]);
+        $defender = $this->creatureFor(User::factory()->create(), [
+            'name' => 'Rating Defender',
+            'endurance' => 16,
+            'charisma' => 8,
+            'intelligence' => 8,
+            'agility' => 1,
+        ]);
+        $weaponSlot = EquipmentSlot::factory()->create(['code' => 'payload-weapon']);
+        $shieldSlot = EquipmentSlot::factory()->create(['code' => 'payload-shield']);
+
+        $this->equip($attacker, $weaponSlot, ['damage' => 10]);
+        $this->equip($defender, $shieldSlot, ['defense' => 7]);
+
+        $battle = app(BattleEngine::class)->run($attacker, $defender, seed: 12345);
+        $payload = $battle->events()
+            ->where('actor_creature_id', $attacker->id)
+            ->whereIn('event_type', ['hit', 'critical_hit'])
+            ->get()
+            ->pluck('payload')
+            ->first();
+
+        $this->assertIsArray($payload);
+        $this->assertSame(10, $payload['damage_equipment_bonus']);
+        $this->assertSame(7, $payload['defense_equipment_bonus']);
+        $this->assertGreaterThan(0, $payload['attack_rating']);
+        $this->assertGreaterThan(0, $payload['defense_rating']);
+    }
+
     public function test_automatic_pve_battle_applies_player_and_bot_damage_multipliers(): void
     {
         ArenaSetting::factory()->create([
@@ -133,6 +201,30 @@ class BattleEngineTest extends TestCase
 
         $this->assertContains(0.70, $multipliers);
         $this->assertContains(1.30, $multipliers);
+    }
+
+    /**
+     * @param  array<string, int>  $bonuses
+     */
+    private function equip(Creature $creature, EquipmentSlot $slot, array $bonuses): void
+    {
+        $item = Item::factory()->create([
+            'slot_key' => $slot->code,
+            'slots_required' => [$slot->code],
+            'bonuses' => $bonuses,
+        ]);
+        $itemInstance = ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $creature->user_id,
+            'bound_creature_id' => $creature->id,
+            'state' => 'equipped',
+        ]);
+
+        CreatureEquipment::query()->create([
+            'creature_id' => $creature->id,
+            'item_instance_id' => $itemInstance->id,
+            'slot_key' => $slot->code,
+        ]);
     }
 
     /**

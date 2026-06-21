@@ -9,6 +9,7 @@
 <section class="battle-participants-strip">
     @foreach ($battle->participants as $participant)
         @php
+            $combatStats = $participant->creature->effectiveCombatStats();
             $resultLabel = $participant->result ? ($resultLabels[$participant->result] ?? $participant->result) : 'В бою';
             $resultTone = match ($participant->result) {
                 'win' => 'border-emerald-500/40 text-emerald-100',
@@ -42,6 +43,8 @@
             <div class="battle-participant-card__metrics">
                 <span><b>HP</b> {{ $participant->hp_after }}/{{ $participant->hp_before }}</span>
                 <span><b>PS</b> {{ $participant->power_score_before }}</span>
+                <span><b>Урон</b> {{ $combatStats['damage']['total'] }}</span>
+                <span><b>Защита</b> {{ $combatStats['defense']['total'] }}</span>
                 @if ($participant->result)
                     <span><b>XP</b> +{{ $participant->reward_xp }}</span>
                     <span><b>Монеты</b> +{{ $participant->reward_tokens }}</span>

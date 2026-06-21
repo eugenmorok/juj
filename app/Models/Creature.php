@@ -71,6 +71,10 @@ class Creature extends Model
         'luck' => 'L',
     ];
 
+    public const DAMAGE_BONUS_KEYS = ['damage', 'attack'];
+
+    public const DEFENSE_BONUS_KEYS = ['defense', 'armor'];
+
     /**
      * @return BelongsTo<User, $this>
      */
@@ -190,6 +194,74 @@ class Creature extends Model
         ));
     }
 
+    /**
+     * @param  array<string, int|float>  $special
+     */
+    public static function damageFromSpecial(array $special): int
+    {
+        return max(1, (int) round(
+            4
+            + ((int) ($special['strength'] ?? 1) * 1.30)
+            + ((int) ($special['agility'] ?? 1) * 0.35)
+            + ((int) ($special['intelligence'] ?? 1) * 0.25)
+        ));
+    }
+
+    /**
+     * @param  array<string, int|float>  $special
+     */
+    public static function defenseFromSpecial(array $special, bool $guarded = false): int
+    {
+        return max(0, (int) round(
+            ((int) ($special['endurance'] ?? 1) * 0.55)
+            + ((int) ($special['charisma'] ?? 1) * 0.25)
+            + ((int) ($special['intelligence'] ?? 1) * ($guarded ? 0.28 : 0.15))
+            + ($guarded ? 7 : 0)
+        ));
+    }
+
+    /**
+     * @param  array<string, mixed>  $bonuses
+     */
+    public static function damageBonusFromBonuses(array $bonuses): int
+    {
+        return self::combatBonusFromBonuses($bonuses, self::DAMAGE_BONUS_KEYS);
+    }
+
+    /**
+     * @param  array<string, mixed>  $bonuses
+     */
+    public static function defenseBonusFromBonuses(array $bonuses): int
+    {
+        return self::combatBonusFromBonuses($bonuses, self::DEFENSE_BONUS_KEYS);
+    }
+
+    /**
+     * @return array{damage: array{base: int, equipment: int, total: int}, defense: array{base: int, equipment: int, total: int}}
+     */
+    public function effectiveCombatStats(?ArenaSetting $settings = null): array
+    {
+        $special = $this->effectiveSpecialValues($settings);
+        $bonuses = $this->equipmentBonuses();
+        $damageBase = self::damageFromSpecial($special);
+        $defenseBase = self::defenseFromSpecial($special);
+        $damageBonus = self::damageBonusFromBonuses($bonuses);
+        $defenseBonus = self::defenseBonusFromBonuses($bonuses);
+
+        return [
+            'damage' => [
+                'base' => $damageBase,
+                'equipment' => $damageBonus,
+                'total' => max(1, $damageBase + $damageBonus),
+            ],
+            'defense' => [
+                'base' => $defenseBase,
+                'equipment' => $defenseBonus,
+                'total' => max(0, $defenseBase + $defenseBonus),
+            ],
+        ];
+    }
+
     public function spentCreationPoints(CreatureSpecies $species): int
     {
         return collect(self::SPECIAL_ATTRIBUTES)
@@ -227,6 +299,16 @@ class Creature extends Model
     public static function maxHpForEndurance(int $endurance): int
     {
         return 50 + ($endurance * 10);
+    }
+
+    /**
+     * @param  array<string, mixed>  $bonuses
+     * @param  list<string>  $keys
+     */
+    private static function combatBonusFromBonuses(array $bonuses, array $keys): int
+    {
+        return collect($keys)
+            ->sum(fn (string $key): int => is_numeric($bonuses[$key] ?? null) ? (int) $bonuses[$key] : 0);
     }
 
     /**

@@ -578,7 +578,10 @@ class InteractiveBattleService
             return;
         }
 
-        $damage = $this->damage($attackerSpecial, $targetSpecial, $action->attack_zone, $sameZoneGuard);
+        $attackerCombat = $this->combatStats($attacker, $attackerSpecial);
+        $targetCombat = $this->combatStats($target, $targetSpecial, $sameZoneGuard);
+        $damageBreakdown = $this->damage($attackerCombat, $targetCombat, $action->attack_zone);
+        $damage = $damageBreakdown['damage'];
         $critChance = $this->clamp((int) round(4 + ($attackerSpecial['luck'] * 0.75) + ($attackerSpecial['perception'] * 0.12) - ($targetSpecial['charisma'] * 0.2)), 3, 45);
         $critRoll = $this->roll($battle, $round, $attacker->creature_id, 'crit-'.$action->id, 1, 100);
         $critical = $critRoll <= $critChance;
@@ -618,6 +621,11 @@ class InteractiveBattleService
             'crit_chance' => $critChance,
             'crit_roll' => $critRoll,
             'pve_balance_multiplier' => $pveBalanceMultiplier,
+            'attack_rating' => $damageBreakdown['attack_rating'],
+            'defense_rating' => $damageBreakdown['defense_rating'],
+            'damage_rating' => $attackerCombat['damage'],
+            'damage_equipment_bonus' => $attackerCombat['damage_bonus'],
+            'defense_equipment_bonus' => $targetCombat['defense_bonus'],
             'target_hp' => max(0, $target->hp_after),
         ], "{$attacker->creature->name} попадает в {$this->zoneLabel($action->attack_zone)}: {$damage} урона. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
     }
@@ -931,27 +939,48 @@ class InteractiveBattleService
     }
 
     /**
-     * @param  array<string, int>  $attackerSpecial
-     * @param  array<string, int>  $targetSpecial
+     * @param  array<string, int>  $special
+     * @return array{damage_base: int, damage_bonus: int, damage: int, defense_base: int, defense_bonus: int, defense: int}
      */
-    private function damage(array $attackerSpecial, array $targetSpecial, string $zone, bool $guarded): int
+    private function combatStats(BattleParticipant $participant, array $special, bool $guarded = false): array
     {
-        $base = 4
-            + ($attackerSpecial['strength'] * 1.3)
-            + ($attackerSpecial['agility'] * 0.35)
-            + ($attackerSpecial['intelligence'] * 0.25);
-        $defense = ($targetSpecial['endurance'] * 0.55)
-            + ($targetSpecial['charisma'] * 0.25)
-            + ($targetSpecial['intelligence'] * ($guarded ? 0.28 : 0.15))
-            + ($guarded ? 7 : 0);
+        $bonuses = $participant->creature->equipmentBonuses();
+        $damageBase = Creature::damageFromSpecial($special);
+        $defenseBase = Creature::defenseFromSpecial($special, $guarded);
+        $damageBonus = Creature::damageBonusFromBonuses($bonuses);
+        $defenseBonus = Creature::defenseBonusFromBonuses($bonuses);
+
+        return [
+            'damage_base' => $damageBase,
+            'damage_bonus' => $damageBonus,
+            'damage' => max(1, $damageBase + $damageBonus),
+            'defense_base' => $defenseBase,
+            'defense_bonus' => $defenseBonus,
+            'defense' => max(0, $defenseBase + $defenseBonus),
+        ];
+    }
+
+    /**
+     * @param  array<string, int>  $attackerCombat
+     * @param  array<string, int>  $targetCombat
+     * @return array{damage: int, attack_rating: int, defense_rating: int}
+     */
+    private function damage(array $attackerCombat, array $targetCombat, string $zone): array
+    {
         $zoneMultiplier = match ($zone) {
             'head' => 1.35,
             'arms' => 0.9,
             'legs' => 0.95,
             default => 1.0,
         };
+        $attackRating = max(1, (int) round($attackerCombat['damage'] * $zoneMultiplier));
+        $defenseRating = max(0, (int) $targetCombat['defense']);
 
-        return max(1, (int) round(($base * $zoneMultiplier) - $defense));
+        return [
+            'damage' => max(1, $attackRating - $defenseRating),
+            'attack_rating' => $attackRating,
+            'defense_rating' => $defenseRating,
+        ];
     }
 
     /**

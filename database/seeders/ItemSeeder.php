@@ -24,7 +24,7 @@ class ItemSeeder extends Seeder
             'price' => 80,
             'slot_key' => 'body',
             'slots_required' => ['body'],
-            'bonuses' => ['endurance' => 2],
+            'bonuses' => ['endurance' => 2, 'defense' => 2],
         ],
         [
             'name' => 'Ядовитое жало',
@@ -37,7 +37,7 @@ class ItemSeeder extends Seeder
             'slot_key' => 'primary-weapon',
             'slots_required' => ['primary-weapon'],
             'allowed_type_codes' => ['insects'],
-            'bonuses' => ['agility' => 1, 'luck' => 1, 'poison_damage' => 5],
+            'bonuses' => ['agility' => 1, 'luck' => 1, 'damage' => 3, 'poison_damage' => 5],
         ],
         [
             'name' => 'Боевой процессор',
@@ -141,7 +141,7 @@ class ItemSeeder extends Seeder
             'price' => 150,
             'slot_key' => 'primary-weapon',
             'slots_required' => ['primary-weapon'],
-            'bonuses' => ['strength' => 2, 'agility' => 1],
+            'bonuses' => ['strength' => 2, 'agility' => 1, 'damage' => 4],
         ],
         [
             'name' => 'Нейронный ускоритель',
@@ -166,7 +166,7 @@ class ItemSeeder extends Seeder
             'price' => 135,
             'slot_key' => 'accessory',
             'slots_required' => ['accessory'],
-            'bonuses' => ['endurance' => 2, 'luck' => 1],
+            'bonuses' => ['endurance' => 2, 'luck' => 1, 'defense' => 2],
         ],
         [
             'name' => 'Тактический стимулятор',
@@ -203,7 +203,7 @@ class ItemSeeder extends Seeder
             'required_level' => 2,
             'slot_key' => 'body',
             'slots_required' => ['body'],
-            'bonuses' => ['agility' => 2, 'charisma' => 2],
+            'bonuses' => ['agility' => 2, 'charisma' => 2, 'defense' => 3],
         ],
         [
             'name' => 'Кристалл вероятности',

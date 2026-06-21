@@ -66,7 +66,7 @@ class ShopItemGenerationService
             default => 1,
         };
         [$allowedTypes, $allowedSpecies] = $this->restrictions();
-        $bonuses = $this->bonuses($itemType, $rarity);
+        $bonuses = $this->bonuses($itemType, $rarity, $slot?->code);
         $isConsumable = in_array($itemType, ['potion', 'consumable'], true);
         $name = $this->name($itemType, $rarity);
 
@@ -126,7 +126,7 @@ class ShopItemGenerationService
     /**
      * @return array<string, int>
      */
-    private function bonuses(string $itemType, string $rarity): array
+    private function bonuses(string $itemType, string $rarity, ?string $slotCode = null): array
     {
         $value = match ($rarity) {
             'unique' => 4,
@@ -139,9 +139,10 @@ class ShopItemGenerationService
             return ['heal' => 20 + ($value * 15)];
         }
 
+        $combatBonus = $this->combatBonus($slotCode, $value);
         $attributes = ['strength', 'perception', 'endurance', 'charisma', 'intelligence', 'agility', 'luck'];
         $first = $attributes[array_rand($attributes)];
-        $bonuses = [$first => $value];
+        $bonuses = $combatBonus ?: [$first => $value];
 
         if (in_array($rarity, ['elite', 'unique'], true)) {
             $second = collect($attributes)->reject(fn (string $attribute): bool => $attribute === $first)->random();
@@ -149,6 +150,22 @@ class ShopItemGenerationService
         }
 
         return $bonuses;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function combatBonus(?string $slotCode, int $value): array
+    {
+        if (! $slotCode || random_int(1, 100) > 70) {
+            return [];
+        }
+
+        return match ($slotCode) {
+            'primary-weapon', 'secondary-weapon', 'front-limbs' => ['damage' => $value * 2],
+            'defense', 'body' => ['defense' => $value * 2],
+            default => [],
+        };
     }
 
     private function rarity(): string

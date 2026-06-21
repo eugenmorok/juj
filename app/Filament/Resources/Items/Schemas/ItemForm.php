@@ -127,6 +127,7 @@ class ItemForm
                             ->label('Бонусы')
                             ->keyLabel('Параметр')
                             ->valueLabel('Значение')
+                            ->helperText('Боевые ключи: damage/attack добавляют Урон, defense/armor добавляют Защиту. SPECIAL-ключи по-прежнему работают.')
                             ->columnSpanFull(),
                         Select::make('duration_type')
                             ->label('Длительность')

@@ -141,12 +141,24 @@ class BattleEngine
 
         $special = $this->battleArenas->applyEffects($special, $arenaEffects);
         $maxHp = max(1, 50 + ($special['endurance'] * 10) + ($creature->level * 5) + (int) ($bonuses['hp'] ?? 0));
+        $damageBase = Creature::damageFromSpecial($special);
+        $defenseBase = Creature::defenseFromSpecial($special);
+        $damageBonus = Creature::damageBonusFromBonuses($bonuses);
+        $defenseBonus = Creature::defenseBonusFromBonuses($bonuses);
 
         return [
             'creature' => $creature,
             'side' => $side,
             'special' => $special,
             'bonuses' => $bonuses,
+            'combat' => [
+                'damage_base' => $damageBase,
+                'damage_bonus' => $damageBonus,
+                'damage' => max(1, $damageBase + $damageBonus),
+                'defense_base' => $defenseBase,
+                'defense_bonus' => $defenseBonus,
+                'defense' => max(0, $defenseBase + $defenseBonus),
+            ],
             'skills' => $creature->skills->pluck('code')->all(),
             'max_hp' => $maxHp,
             'hp' => $maxHp,
@@ -243,7 +255,8 @@ class BattleEngine
             return;
         }
 
-        $damage = $this->damage($attacker, $defender);
+        $damageBreakdown = $this->damage($attacker, $defender);
+        $damage = $damageBreakdown['damage'];
         $critChance = $this->critChance($attacker);
         $critRoll = $this->roll(1, 100);
         $isCrit = $critRoll <= $critChance;
@@ -271,6 +284,11 @@ class BattleEngine
             'crit_chance' => $critChance,
             'crit_roll' => $critRoll,
             'pve_balance_multiplier' => $pveBalanceMultiplier,
+            'attack_rating' => $damageBreakdown['attack_rating'],
+            'defense_rating' => $damageBreakdown['defense_rating'],
+            'damage_rating' => $attacker['combat']['damage'],
+            'damage_equipment_bonus' => $attacker['combat']['damage_bonus'],
+            'defense_equipment_bonus' => $defender['combat']['defense_bonus'],
             'target_hp' => $defender['hp'],
         ], "{$attackerCreature->name} наносит {$damage} урона. {$defenderCreature->name}: {$defender['hp']} HP.{$suffix}");
     }
@@ -336,30 +354,29 @@ class BattleEngine
     /**
      * @param  array<string, mixed>  $attacker
      * @param  array<string, mixed>  $defender
+     * @return array{damage: int, attack_rating: int, defense_rating: int}
      */
-    private function damage(array $attacker, array $defender): int
+    private function damage(array $attacker, array $defender): array
     {
-        $baseDamage = ((int) $attacker['special']['strength'] * 1.5)
-            + ((int) $attacker['special']['intelligence'] * 0.25)
-            + (int) ($attacker['bonuses']['damage'] ?? 0)
-            + $this->roll(1, 6);
-        $defense = ((int) $defender['special']['endurance'] * 0.5)
-            + ((int) $defender['special']['charisma'] * 0.25)
-            + ((int) $defender['special']['intelligence'] * 0.15)
-            + (int) ($defender['bonuses']['armor'] ?? 0);
+        $attackRating = (int) $attacker['combat']['damage'] + $this->roll(1, 6);
+        $defenseRating = (int) $defender['combat']['defense'];
 
         if (in_array('thick-hide', $defender['skills'], true)) {
-            $defense *= 1.1;
+            $defenseRating = (int) round($defenseRating * 1.1);
         }
 
         if (
             in_array('weakness-analysis', $attacker['skills'], true)
             && (int) $attacker['special']['intelligence'] > (int) $defender['special']['intelligence']
         ) {
-            $baseDamage *= 1.1;
+            $attackRating = (int) round($attackRating * 1.1);
         }
 
-        return max(1, (int) round($baseDamage - $defense));
+        return [
+            'damage' => max(1, $attackRating - $defenseRating),
+            'attack_rating' => $attackRating,
+            'defense_rating' => $defenseRating,
+        ];
     }
 
     /**
