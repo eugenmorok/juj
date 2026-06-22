@@ -125,6 +125,7 @@ class TurnBasedArenaBattleTest extends TestCase
     public function test_interactive_battle_page_shows_equipment_map_for_player_and_bot(): void
     {
         [$type, $species] = $this->catalog();
+        $species->forceFill(['portrait_image' => 'game-assets/creatures/animal-wolf.webp'])->save();
         $user = User::factory()->create();
         $botProfile = BotProfile::factory()->create(['style' => 'balanced']);
         $creature = $this->creatureFor($user, $type, $species, ['name' => 'Cartographer']);
@@ -174,7 +175,10 @@ class TurnBasedArenaBattleTest extends TestCase
             ->assertSeeText('Урон')
             ->assertSeeText('+7')
             ->assertSeeText('Защита')
-            ->assertSeeText('+4');
+            ->assertSeeText('+4')
+            ->assertSee('battle-equipment-slot__icon', false)
+            ->assertSee('battle-equipment-silhouette__portrait', false)
+            ->assertDontSee('item-details__tile', false);
     }
 
     public function test_real_players_submit_actions_before_round_is_resolved(): void
@@ -329,15 +333,8 @@ class TurnBasedArenaBattleTest extends TestCase
             ->get(route('arena.battles.show', $battle))
             ->assertOk()
             ->assertSeeText('Battle Tonic')
-            ->assertSeeText('Restores health and temporarily increases strength.')
-            ->assertSeeText('Урон')
-            ->assertSeeText('+2')
-            ->assertSeeText('Защита')
-            ->assertSeeText('+1')
-            ->assertSeeText('Лечение')
-            ->assertSeeText('+25')
-            ->assertSeeText('Сила')
-            ->assertSeeText('+3');
+            ->assertDontSeeText('Restores health and temporarily increases strength.')
+            ->assertDontSee('item-details__tile', false);
 
         $this->actingAs($user)
             ->post(route('arena.battles.actions.store', $battle), [

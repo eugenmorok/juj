@@ -1,5 +1,6 @@
 @php
     use App\Models\EquipmentSlot;
+    use App\Support\MediaUrl;
     use Illuminate\Support\Str;
 
     $slots = EquipmentSlot::query()
@@ -46,6 +47,12 @@
                 $creature = $participant->creature;
                 $equipmentBySlot = $creature?->equipmentRows?->keyBy('slot_key') ?? collect();
                 $equippedCount = $equipmentBySlot->count();
+                $creatureImage = MediaUrl::resolve(
+                    $creature?->species?->portrait_image
+                    ?? $creature?->species?->battle_image
+                    ?? $creature?->species?->icon
+                    ?? $creature?->type?->icon
+                );
             @endphp
 
             <article class="battle-equipment-card">
@@ -64,6 +71,12 @@
 
                 <div class="battle-equipment-card__body" aria-label="Схема экипировки {{ $creature?->name ?? 'участника' }}">
                     <div class="battle-equipment-silhouette" aria-hidden="true">
+                        <span class="battle-equipment-silhouette__aura"></span>
+                        <span class="battle-equipment-silhouette__ring battle-equipment-silhouette__ring--outer"></span>
+                        <span class="battle-equipment-silhouette__ring battle-equipment-silhouette__ring--inner"></span>
+                        @if ($creatureImage)
+                            <img class="battle-equipment-silhouette__portrait" src="{{ $creatureImage }}" alt="">
+                        @endif
                         <span class="battle-equipment-silhouette__head"></span>
                         <span class="battle-equipment-silhouette__body"></span>
                         <span class="battle-equipment-silhouette__limb battle-equipment-silhouette__limb--front-left"></span>
@@ -79,6 +92,19 @@
                             $item = $itemInstance?->item;
                             $slotClass = 'battle-equipment-slot--'.Str::slug($slot->code);
                             $slotLabel = $shortLabels[$slot->code] ?? Str::upper(Str::substr($slot->name, 0, 1));
+                            $damageBonus = $item?->damageBonus() ?? 0;
+                            $defenseBonus = $item?->defenseBonus() ?? 0;
+                            $bonusSummaries = $item?->bonusSummaries() ?? [];
+                            $compactEffects = collect($bonusSummaries)
+                                ->reject(fn (string $summary): bool => str_starts_with($summary, 'Урон ') || str_starts_with($summary, 'Защита '))
+                                ->take(4)
+                                ->values()
+                                ->all();
+                            $slotSummary = $item
+                                ? collect($item->equipmentSlotKeys())
+                                    ->map(fn (string $slotKey): string => $slots->firstWhere('code', $slotKey)?->name ?? $slotKey)
+                                    ->join(', ')
+                                : null;
                         @endphp
 
                         <div
@@ -86,21 +112,44 @@
                             tabindex="0"
                             aria-label="{{ $slot->name }}: {{ $item?->name ?? 'пусто' }}"
                         >
-                            <span class="battle-equipment-slot__mark">{{ $slotLabel }}</span>
+                            @if ($item)
+                                <x-game-icon :icon="$item->icon" :label="$item->name" size="sm" class="battle-equipment-slot__icon" />
+                            @else
+                                <span class="battle-equipment-slot__mark">{{ $slotLabel }}</span>
+                            @endif
                             <span class="battle-equipment-slot__name">{{ $slot->name }}</span>
 
                             <div class="battle-equipment-tooltip" role="tooltip">
                                 @if ($item)
                                     <p class="battle-equipment-tooltip__slot">{{ $slot->name }}</p>
-                                    <h4>{{ $item->name }}</h4>
-                                    <x-item-details
-                                        :item="$item"
-                                        :compact="true"
-                                        :show-description="true"
-                                        :show-effects="true"
-                                        :show-meta="true"
-                                        class="mt-2"
-                                    />
+                                    <div class="battle-equipment-tooltip__head">
+                                        <x-game-icon :icon="$item->icon" :label="$item->name" size="sm" class="battle-equipment-tooltip__icon" />
+                                        <div>
+                                            <h4>{{ $item->name }}</h4>
+                                            <p>{{ \App\Models\Item::RARITIES[$item->rarity] ?? $item->rarity }} · {{ \App\Models\Item::TYPES[$item->item_type] ?? $item->item_type }} · ур. {{ $item->required_level }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="battle-equipment-tooltip__stats">
+                                        <span class="battle-equipment-tooltip__stat battle-equipment-tooltip__stat--damage">Урон {{ $damageBonus > 0 ? '+' : '' }}{{ $damageBonus }}</span>
+                                        <span class="battle-equipment-tooltip__stat battle-equipment-tooltip__stat--defense">Защита {{ $defenseBonus > 0 ? '+' : '' }}{{ $defenseBonus }}</span>
+                                    </div>
+
+                                    @if ($compactEffects !== [])
+                                        <p class="battle-equipment-tooltip__effects">
+                                            @foreach ($compactEffects as $effect)
+                                                <span>{{ $effect }}</span>
+                                            @endforeach
+                                        </p>
+                                    @endif
+
+                                    @if ($slotSummary)
+                                        <p class="battle-equipment-tooltip__line"><b>Слоты:</b> {{ $slotSummary }}</p>
+                                    @endif
+
+                                    @if ($item->description)
+                                        <p class="battle-equipment-tooltip__description">{{ Str::limit($item->description, 92) }}</p>
+                                    @endif
                                 @else
                                     <p class="battle-equipment-tooltip__slot">{{ $slot->name }}</p>
                                     <h4>Пустой слот</h4>
@@ -120,6 +169,7 @@
 
                         @if ($item)
                             <span title="{{ $slot?->name ?? $slotKey }}">
+                                <x-game-icon :icon="$item->icon" :label="$item->name" size="sm" class="battle-equipment-card__legend-icon" />
                                 {{ $shortLabels[$slotKey] ?? '•' }} {{ $item->name }}
                             </span>
                         @endif

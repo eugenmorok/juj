@@ -69,28 +69,6 @@
                     </select>
                 </label>
 
-                @if ($availableConsumables->isNotEmpty())
-                    <div class="grid gap-2 sm:grid-cols-2">
-                        @foreach ($availableConsumables as $inventoryItem)
-                            @php($item = $inventoryItem->itemInstance?->item)
-                            @if ($item)
-                                <article class="rounded-md border border-zinc-700 bg-zinc-950/70 p-3 text-sm">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <strong class="text-zinc-100">{{ $item->name }}</strong>
-                                        <span class="text-xs text-emerald-300">{{ $inventoryItem->itemInstance->remainingUses() }} шт.</span>
-                                    </div>
-                                    <x-item-details
-                                        :item="$item"
-                                        :inventory-item="$inventoryItem"
-                                        compact
-                                        class="mt-2"
-                                    />
-                                </article>
-                            @endif
-                        @endforeach
-                    </div>
-                @endif
-
                 <button type="submit">Подтвердить шаг</button>
             </form>
         @endif
