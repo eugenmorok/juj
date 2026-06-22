@@ -157,13 +157,13 @@ class ShopItemGenerationService
      */
     private function combatBonus(?string $slotCode, int $value): array
     {
-        if (! $slotCode || random_int(1, 100) > 70) {
+        if (! $slotCode) {
             return [];
         }
 
-        return match ($slotCode) {
-            'primary-weapon', 'secondary-weapon', 'front-limbs' => ['damage' => $value * 2],
-            'defense', 'body' => ['defense' => $value * 2],
+        return match (true) {
+            in_array($slotCode, Item::DAMAGE_SLOT_KEYS, true) => ['damage' => $value * 2],
+            in_array($slotCode, Item::DEFENSE_SLOT_KEYS, true) => ['defense' => $value * 2],
             default => [],
         };
     }

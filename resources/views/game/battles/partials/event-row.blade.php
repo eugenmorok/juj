@@ -76,6 +76,11 @@
                     −{{ $payload['damage'] }} HP
                 </strong>
             @endif
+            @if ($isHit && (int) ($payload['poison_damage'] ?? 0) > 0)
+                <strong class="battle-event-effect battle-event-effect--{{ $damagePerspective }}">
+                    +{{ $payload['poison_damage'] }} яд
+                </strong>
+            @endif
             @if ($isPositive && array_key_exists('heal', $payload) && (int) $payload['heal'] > 0)
                 <strong class="battle-event-effect battle-event-effect--{{ $perspective }}">
                     +{{ $payload['heal'] }} HP
@@ -89,7 +94,7 @@
 
     <p class="battle-event-row__text">{{ $event->text_log }}</p>
 
-    @if (array_key_exists('attack_zone', $payload) || array_key_exists('hit_chance', $payload) || array_key_exists('attack_rating', $payload) || array_key_exists('defense_rating', $payload) || ! empty($payload['special']))
+    @if (array_key_exists('attack_zone', $payload) || array_key_exists('hit_chance', $payload) || array_key_exists('attack_rating', $payload) || array_key_exists('defense_rating', $payload) || array_key_exists('poison_damage', $payload) || ! empty($payload['special']))
         <div class="battle-event-row__details">
             @if (array_key_exists('attack_zone', $payload))
                 <span>Зона: {{ $zoneLabels[$payload['attack_zone']] ?? $payload['attack_zone'] }}</span>
@@ -102,6 +107,9 @@
             @endif
             @if (array_key_exists('defense_rating', $payload))
                 <span>Защита: {{ $payload['defense_rating'] }}</span>
+            @endif
+            @if ((int) ($payload['poison_damage'] ?? 0) > 0)
+                <span>Яд: +{{ $payload['poison_damage'] }}</span>
             @endif
             @if (! empty($payload['special']))
                 @foreach ($payload['special'] as $attribute => $value)

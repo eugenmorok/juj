@@ -7,6 +7,7 @@ use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
 use App\Models\Skill;
 use App\Models\User;
+use App\Services\SkillCatalogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -168,7 +169,7 @@ class CreatureController extends Controller
         return back()->with('status', 'SPECIAL улучшен. Списано очков развития: '.Creature::SPECIAL_DEVELOPMENT_COST.'.');
     }
 
-    public function show(Request $request, Creature $creature): View
+    public function show(Request $request, Creature $creature, SkillCatalogService $skillCatalog): View
     {
         $this->authorizeCreatureOwner($request, $creature);
 
@@ -184,15 +185,7 @@ class CreatureController extends Controller
 
         return view('game.creatures.show', [
             'creature' => $creature,
-            'availableSkills' => Skill::query()
-                ->active()
-                ->with(['requiredType', 'requiredSpecies'])
-                ->orderBy('cost')
-                ->orderBy('name')
-                ->get()
-                ->reject(fn (Skill $skill): bool => $creature->skills->contains($skill))
-                ->filter(fn (Skill $skill): bool => $skill->isAvailableFor($creature))
-                ->values(),
+            'availableSkills' => $skillCatalog->ensureMinimumAvailableFor($creature),
             'playerInventory' => $request->user()
                 ->ensureInventory()
                 ->load('inventoryItems.itemInstance.item'),

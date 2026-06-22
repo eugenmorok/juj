@@ -7,7 +7,6 @@ use App\Models\CreatureEquipment;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
 use App\Models\EquipmentSlot;
-use App\Models\Inventory;
 use App\Models\Item;
 use App\Models\ItemInstance;
 use App\Models\User;
@@ -127,6 +126,59 @@ class EquipmentManagementTest extends TestCase
             'slot_key' => 'defense',
         ]);
         $this->assertSame(2, CreatureEquipment::query()->where('item_instance_id', $itemInstance->id)->count());
+    }
+
+    public function test_equipment_page_normalizes_json_slot_objects_and_shows_combat_effects(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user);
+        $slot = EquipmentSlot::factory()->create([
+            'name' => 'Accessory / Collar / Chip',
+            'code' => 'accessory',
+        ]);
+        $item = Item::factory()->create([
+            'name' => 'Poison Collar',
+            'item_type' => 'equipment',
+            'slot_key' => json_encode($slot->toArray(), JSON_UNESCAPED_UNICODE),
+            'slots_required' => [
+                'id' => $slot->id,
+                'name' => $slot->name,
+                'code' => $slot->code,
+                'description' => $slot->description,
+                'sort_order' => $slot->sort_order,
+                'is_active' => $slot->is_active,
+            ],
+            'bonuses' => ['damage' => 3, 'poison_damage' => 5],
+        ]);
+        $itemInstance = ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $user->id,
+        ]);
+        $inventoryItem = $user->ensureInventory()->addItemInstance($itemInstance);
+
+        $this->actingAs($user)
+            ->get(route('entities.equipment', $creature))
+            ->assertOk()
+            ->assertSee('Poison Collar')
+            ->assertSee('Accessory / Collar / Chip')
+            ->assertSeeText('Урон')
+            ->assertSeeText('+3')
+            ->assertSeeText('Урон ядом')
+            ->assertSeeText('+5')
+            ->assertDontSee('{"id":', false)
+            ->assertDontSee('&quot;id&quot;', false);
+
+        $this->actingAs($user)
+            ->from(route('entities.equipment', $creature))
+            ->post(route('entities.equipment.equip', [$creature, $inventoryItem]))
+            ->assertRedirect(route('entities.equipment', $creature, absolute: false))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('creature_equipment', [
+            'creature_id' => $creature->id,
+            'item_instance_id' => $itemInstance->id,
+            'slot_key' => 'accessory',
+        ]);
     }
 
     public function test_player_cannot_equip_item_when_required_slot_is_occupied(): void

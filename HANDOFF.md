@@ -1,5 +1,69 @@
 # HANDOFF
 
+## 2026-06-22 — предметы, слоты, яд, навыки и ремонт экипировки на проде
+
+### Цель
+
+Исправить production-проблемы с предметами Gog: `Усиленная бронепластина` и `Ядовитое жало` должны показывать и реально давать `Защиту`/`Урон`, `Урон ядом +5` должен работать в бою, сырой JSON слота не должен выводиться на `/entities/7/equipment`, в магазине у оружия должен быть `Урон`, у защитных предметов — `Защита`, а панель доступных навыков не должна быть пустой.
+
+### Важные решения
+
+- `poison_damage` стал отдельным боевым эффектом: добавляется к итоговому урону только при успешном попадании и записывается в payload события как `poison_damage`, рядом с `physical_damage` и общим `damage`.
+- Старые данные production чинятся миграцией, а не только сидером: сидеры не переисполняются при обычном деплое.
+- Слоты предметов нормализуются из строк, JSON-строк, объектов `EquipmentSlot`, массивов с `code` и одиночных JSON-объектов. Это закрывает случай, когда на странице показывался сырой объект слота.
+- Убран вывод `{{ $slot ?? '' }}` из общего layout: в обычных страницах с `@extends` локальная переменная `$slot` из циклов могла протекать в layout и печататься над контентом.
+- Для навыков добавлен `SkillCatalogService`: если после фильтрации у сущности меньше 4 доступных навыков, создаются базовые fallback-навыки без требований.
+- Генератор магазина теперь всегда добавляет прямой `damage` предметам оружейных слотов и прямой `defense` защитным слотам.
+
+### Выполненные изменения
+
+- `app/Models/Item.php` — нормализация слотов, человекочитаемый `equipmentSlotSummary()`, группы оружейных/защитных слотов.
+- `app/Models/Creature.php` — расчёт `poison_damage` из бонусов экипировки.
+- `app/Services/BattleEngine.php` и `app/Services/InteractiveBattleService.php` — применение яда в автоматическом и пошаговом бою.
+- `resources/views/game/battles/partials/event-row.blade.php` — отображение отдельного индикатора яда в журнале боя.
+- `app/Services/ShopItemGenerationService.php` — обязательные `damage/defense` для generated-предметов по слотам.
+- `app/Services/SkillCatalogService.php` и `app/Http/Controllers/CreatureController.php` — минимум 4 доступных навыка на карточке сущности.
+- `database/migrations/2026_06_22_000001_fix_item_slots_and_combat_bonuses.php` — ремонт production-данных: нормализация слотов, `reinforced-hide-plate`, `venom-sting`, `auxiliary-cutter`.
+- `database/seeders/ItemSeeder.php` — добавлен предмет `Дополнительный резак` для слота `secondary-weapon`.
+- `resources/views/components/item-details.blade.php` и `resources/views/game/creatures/partials/equipment-candidate.blade.php` — слот показывается человекочитаемо, а не кодом/JSON.
+- `resources/views/layouts/app.blade.php` — удалён ошибочный вывод `$slot`.
+- Тесты расширены для боя с ядом, JSON-слота, магазина, генератора предметов, навыков и каталога.
+
+### Проверки
+
+```bash
+php -l app\Services\SkillCatalogService.php
+php -l app\Models\Item.php
+php -l app\Models\Creature.php
+php -l app\Services\BattleEngine.php
+php -l app\Services\InteractiveBattleService.php
+php -l database\migrations\2026_06_22_000001_fix_item_slots_and_combat_bonuses.php
+php artisan test tests\Feature\BattleEngineTest.php tests\Feature\EquipmentManagementTest.php tests\Feature\ShopPurchaseTest.php tests\Feature\SkillPurchaseTest.php tests\Feature\ShopItemGenerationTest.php tests\Feature\ItemCatalogTest.php
+vendor/bin/pint --dirty
+php vendor/bin/pint app/Services/SkillCatalogService.php database/migrations/2026_06_22_000001_fix_item_slots_and_combat_bonuses.php
+php artisan test
+npm run build
+git diff --check
+```
+
+### Текущие результаты
+
+- Syntax checks — успешно.
+- `vendor/bin/pint --dirty` — успешно; поправлен один неиспользуемый импорт в тесте.
+- `php vendor/bin/pint app/Services/SkillCatalogService.php database/migrations/2026_06_22_000001_fix_item_slots_and_combat_bonuses.php` — успешно.
+- Точечные тесты — 39 tests / 233 assertions, успешно.
+- `php artisan test` — 143 tests / 934 assertions, успешно.
+- `npm run build` — успешно; остаётся прежний warning Vite про `/game-assets/shop/merchant-hall.webp`.
+- `git diff --check` — успешно.
+- Коммит, push и production deploy ещё предстоит выполнить.
+
+### Осталось
+
+- Прогнать полный тестовый набор и сборку.
+- Закоммитить изменения, запушить `main`.
+- Развернуть production, применить миграцию и проверить `/login`, сервисы и HEAD.
+- После деплоя желательно проверить на production `/entities/7/equipment` и `/shop` под реальным пользователем в браузере.
+
 ## 2026-06-21 — читаемость магазина в светлой теме
 
 ### Цель

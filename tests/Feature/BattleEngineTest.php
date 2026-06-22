@@ -166,6 +166,39 @@ class BattleEngineTest extends TestCase
         $this->assertGreaterThan(0, $payload['defense_rating']);
     }
 
+    public function test_poison_damage_bonus_is_applied_on_successful_hits(): void
+    {
+        $attacker = $this->creatureFor(User::factory()->create(), [
+            'name' => 'Poison Attacker',
+            'strength' => 30,
+            'perception' => 30,
+            'intelligence' => 15,
+            'agility' => 30,
+        ]);
+        $defender = $this->creatureFor(User::factory()->create(), [
+            'name' => 'Poison Target',
+            'endurance' => 1,
+            'charisma' => 1,
+            'intelligence' => 1,
+            'agility' => 1,
+        ]);
+        $weaponSlot = EquipmentSlot::factory()->create(['code' => 'primary-weapon']);
+
+        $this->equip($attacker, $weaponSlot, ['poison_damage' => 5]);
+
+        $battle = app(BattleEngine::class)->run($attacker, $defender, seed: 12345);
+        $payload = $battle->events()
+            ->where('actor_creature_id', $attacker->id)
+            ->whereIn('event_type', ['hit', 'critical_hit'])
+            ->get()
+            ->pluck('payload')
+            ->first();
+
+        $this->assertIsArray($payload);
+        $this->assertSame(5, $payload['poison_damage']);
+        $this->assertSame($payload['physical_damage'] + 5, $payload['damage']);
+    }
+
     public function test_automatic_pve_battle_applies_player_and_bot_damage_multipliers(): void
     {
         ArenaSetting::factory()->create([

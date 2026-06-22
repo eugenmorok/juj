@@ -602,8 +602,12 @@ class InteractiveBattleService
             $damage,
         );
 
+        $physicalDamage = $damage;
+        $poisonDamage = max(0, (int) ($attackerCombat['poison_damage'] ?? 0));
+        $totalDamage = $physicalDamage + $poisonDamage;
+
         $target->forceFill([
-            'hp_after' => max(0, $target->hp_after - $damage),
+            'hp_after' => max(0, $target->hp_after - $totalDamage),
         ])->save();
 
         $suffix = $critical ? ' Критический удар.' : '';
@@ -612,7 +616,9 @@ class InteractiveBattleService
         $this->event($battle, $round->round_number, $critical ? 'interactive_critical_hit' : 'interactive_hit', $attacker->creature, $target->creature, [
             'attack_zone' => $action->attack_zone,
             'defense_zone' => $targetAction?->defense_zone,
-            'damage' => $damage,
+            'damage' => $totalDamage,
+            'physical_damage' => $physicalDamage,
+            'poison_damage' => $poisonDamage,
             'composure_mitigation' => $mitigated,
             'composure_chance' => $mitigationChance,
             'composure_roll' => $mitigationRoll,
@@ -627,7 +633,7 @@ class InteractiveBattleService
             'damage_equipment_bonus' => $attackerCombat['damage_bonus'],
             'defense_equipment_bonus' => $targetCombat['defense_bonus'],
             'target_hp' => max(0, $target->hp_after),
-        ], "{$attacker->creature->name} попадает в {$this->zoneLabel($action->attack_zone)}: {$damage} урона. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
+        ], "{$attacker->creature->name} попадает в {$this->zoneLabel($action->attack_zone)}: {$totalDamage} урона. {$target->creature->name}: {$target->hp_after} HP.{$guardText}{$suffix}");
     }
 
     /**
@@ -940,7 +946,7 @@ class InteractiveBattleService
 
     /**
      * @param  array<string, int>  $special
-     * @return array{damage_base: int, damage_bonus: int, damage: int, defense_base: int, defense_bonus: int, defense: int}
+     * @return array{damage_base: int, damage_bonus: int, damage: int, defense_base: int, defense_bonus: int, defense: int, poison_damage: int}
      */
     private function combatStats(BattleParticipant $participant, array $special, bool $guarded = false): array
     {
@@ -949,6 +955,7 @@ class InteractiveBattleService
         $defenseBase = Creature::defenseFromSpecial($special, $guarded);
         $damageBonus = Creature::applyEquipmentCombatMastery(Creature::damageBonusFromBonuses($bonuses), $participant->creature->user);
         $defenseBonus = Creature::applyEquipmentCombatMastery(Creature::defenseBonusFromBonuses($bonuses), $participant->creature->user);
+        $poisonDamage = Creature::poisonDamageBonusFromBonuses($bonuses);
 
         return [
             'damage_base' => $damageBase,
@@ -957,6 +964,7 @@ class InteractiveBattleService
             'defense_base' => $defenseBase,
             'defense_bonus' => $defenseBonus,
             'defense' => max(0, $defenseBase + $defenseBonus),
+            'poison_damage' => $poisonDamage,
         ];
     }
 

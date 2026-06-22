@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Creature;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
+use App\Models\EquipmentSlot;
 use App\Models\Inventory;
 use App\Models\Item;
 use App\Models\ItemInstance;
@@ -20,11 +21,17 @@ class ShopPurchaseTest extends TestCase
     public function test_shop_page_displays_active_items_and_filters_catalog(): void
     {
         $user = User::factory()->create(['tokens' => 300]);
+        $weaponSlot = EquipmentSlot::factory()->create([
+            'name' => 'Primary Weapon / Fangs / Sting',
+            'code' => 'primary-weapon',
+        ]);
         $rareItem = Item::factory()->create([
             'name' => 'Rare Lens',
             'rarity' => 'rare',
             'price' => 120,
             'required_level' => 1,
+            'slot_key' => $weaponSlot->code,
+            'slots_required' => [$weaponSlot->code],
             'bonuses' => ['damage' => 6, 'defense' => 4],
         ]);
         Item::factory()->inactive()->create(['name' => 'Hidden Item']);
@@ -38,6 +45,7 @@ class ShopPurchaseTest extends TestCase
             ->assertSee('item-details__tile', false)
             ->assertDontSee('bg-zinc-950/60', false)
             ->assertSee($rareItem->name)
+            ->assertSee('Primary Weapon / Fangs / Sting')
             ->assertSeeText('Урон')
             ->assertSeeText('+6')
             ->assertSeeText('Защита')

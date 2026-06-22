@@ -14,7 +14,7 @@
 @php
     $itemInstance = $inventoryItem?->itemInstance;
     $slotKeys = $item->equipmentSlotKeys();
-    $slotText = $slotSummary ?? ($slotKeys !== [] ? implode(', ', $slotKeys) : null);
+    $slotText = $slotSummary ?? $item->equipmentSlotSummary();
     $duration = $item->durationSummary();
     $applicabilityText = $applicability ?? $item->applicabilitySummary();
     $damageBonus = $item->damageBonus();

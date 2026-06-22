@@ -59,6 +59,25 @@ class SkillPurchaseTest extends TestCase
             ->assertSee('Купить');
     }
 
+    public function test_creature_card_generates_at_least_four_available_skills_when_catalog_is_empty(): void
+    {
+        $user = User::factory()->create();
+        $creature = $this->creatureFor($user, [
+            'development_points' => 50,
+        ]);
+
+        $this->assertSame(0, Skill::query()->count());
+
+        $this->actingAs($user)
+            ->get(route('entities.show', $creature))
+            ->assertOk()
+            ->assertViewHas('availableSkills', fn ($skills): bool => $skills->count() >= 4)
+            ->assertDontSee('Новых навыков для покупки нет.')
+            ->assertSee('Купить');
+
+        $this->assertGreaterThanOrEqual(4, Skill::query()->where('code', 'like', 'generated-skill-%')->count());
+    }
+
     public function test_player_can_buy_available_skill_with_development_points(): void
     {
         $user = User::factory()->create();

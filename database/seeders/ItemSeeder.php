@@ -40,6 +40,18 @@ class ItemSeeder extends Seeder
             'bonuses' => ['agility' => 1, 'luck' => 1, 'damage' => 3, 'poison_damage' => 5],
         ],
         [
+            'name' => 'Дополнительный резак',
+            'code' => 'auxiliary-cutter',
+            'icon' => 'game-assets/shop/pulse-cutter.webp',
+            'description' => 'Вспомогательное оружие для хвоста, манипулятора или боевого модуля.',
+            'item_type' => 'equipment',
+            'rarity' => 'common',
+            'price' => 90,
+            'slot_key' => 'secondary-weapon',
+            'slots_required' => ['secondary-weapon'],
+            'bonuses' => ['agility' => 1, 'damage' => 2],
+        ],
+        [
             'name' => 'Боевой процессор',
             'code' => 'combat-processor',
             'icon' => 'game-assets/shop/combat-processor.webp',

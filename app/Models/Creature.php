@@ -75,6 +75,8 @@ class Creature extends Model
 
     public const DEFENSE_BONUS_KEYS = ['defense', 'armor'];
 
+    public const POISON_DAMAGE_BONUS_KEYS = ['poison_damage'];
+
     /**
      * @return BelongsTo<User, $this>
      */
@@ -234,6 +236,14 @@ class Creature extends Model
     public static function defenseBonusFromBonuses(array $bonuses): int
     {
         return self::combatBonusFromBonuses($bonuses, self::DEFENSE_BONUS_KEYS);
+    }
+
+    /**
+     * @param  array<string, mixed>  $bonuses
+     */
+    public static function poisonDamageBonusFromBonuses(array $bonuses): int
+    {
+        return max(0, self::combatBonusFromBonuses($bonuses, self::POISON_DAMAGE_BONUS_KEYS));
     }
 
     /**

@@ -2,6 +2,7 @@
     $itemInstance = $inventoryItem->itemInstance;
     $item = $itemInstance->item;
     $slotKeys = $item->equipmentSlotKeys();
+    $slotText = $item->equipmentSlotSummary();
     $hasOccupiedSlot = collect($slotKeys)->intersect($occupiedSlotKeys)->isNotEmpty();
     $canEquip = $creature->is_available_for_battle
         && $item->isEquipment()
@@ -16,8 +17,8 @@
             <h3 class="font-semibold text-white">{{ $item->name }}</h3>
             <p class="mt-1 text-xs text-zinc-500">
                 Ячейка {{ $inventoryItem->slot_number }}
-                @if ($slotKeys !== [])
-                    / {{ implode(', ', $slotKeys) }}
+                @if ($slotText)
+                    / {{ $slotText }}
                 @endif
             </p>
         </div>

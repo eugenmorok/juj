@@ -44,6 +44,17 @@ class ShopItemGenerationTest extends TestCase
         $this->assertSame($firstBatch->count() + $secondBatch->count(), Item::query()->where('is_generated', true)->count());
     }
 
+    public function test_generated_weapon_and_defense_slots_receive_direct_combat_bonuses(): void
+    {
+        $service = app(ShopItemGenerationService::class);
+        $combatBonus = new \ReflectionMethod($service, 'combatBonus');
+
+        $this->assertSame(['damage' => 4], $combatBonus->invoke($service, 'primary-weapon', 2));
+        $this->assertSame(['damage' => 4], $combatBonus->invoke($service, 'secondary-weapon', 2));
+        $this->assertSame(['defense' => 4], $combatBonus->invoke($service, 'body', 2));
+        $this->assertSame(['defense' => 4], $combatBonus->invoke($service, 'defense', 2));
+    }
+
     public function test_shop_displays_sixteen_random_items_and_entity_applicability(): void
     {
         $user = User::factory()->create();

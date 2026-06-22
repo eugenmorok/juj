@@ -145,6 +145,7 @@ class BattleEngine
         $defenseBase = Creature::defenseFromSpecial($special);
         $damageBonus = Creature::applyEquipmentCombatMastery(Creature::damageBonusFromBonuses($bonuses), $creature->user);
         $defenseBonus = Creature::applyEquipmentCombatMastery(Creature::defenseBonusFromBonuses($bonuses), $creature->user);
+        $poisonDamage = Creature::poisonDamageBonusFromBonuses($bonuses);
 
         return [
             'creature' => $creature,
@@ -158,6 +159,7 @@ class BattleEngine
                 'defense_base' => $defenseBase,
                 'defense_bonus' => $defenseBonus,
                 'defense' => max(0, $defenseBase + $defenseBonus),
+                'poison_damage' => $poisonDamage,
             ],
             'skills' => $creature->skills->pluck('code')->all(),
             'max_hp' => $maxHp,
@@ -272,12 +274,18 @@ class BattleEngine
         [$damage, $pveBalanceMultiplier] = $this->applyPveDamageBalance($attacker, $defender, $damage);
         [$damage, $mitigated] = $this->applyComposureMitigation($damage, $defender);
 
-        $defender['hp'] = max(0, $defender['hp'] - $damage);
+        $physicalDamage = $damage;
+        $poisonDamage = max(0, (int) ($attacker['combat']['poison_damage'] ?? 0));
+        $totalDamage = $physicalDamage + $poisonDamage;
+
+        $defender['hp'] = max(0, $defender['hp'] - $totalDamage);
 
         $suffix = $isCrit ? ' Критический удар.' : '';
         $suffix .= $mitigated ? ' Собранность цели смягчила удар.' : '';
         $this->event($battle, $round, $isCrit ? 'critical_hit' : 'hit', $attackerCreature, $defenderCreature, [
-            'damage' => $damage,
+            'damage' => $totalDamage,
+            'physical_damage' => $physicalDamage,
+            'poison_damage' => $poisonDamage,
             'composure_mitigation' => $mitigated,
             'hit_chance' => $hitChance,
             'hit_roll' => $hitRoll,
@@ -290,7 +298,7 @@ class BattleEngine
             'damage_equipment_bonus' => $attacker['combat']['damage_bonus'],
             'defense_equipment_bonus' => $defender['combat']['defense_bonus'],
             'target_hp' => $defender['hp'],
-        ], "{$attackerCreature->name} наносит {$damage} урона. {$defenderCreature->name}: {$defender['hp']} HP.{$suffix}");
+        ], "{$attackerCreature->name} наносит {$totalDamage} урона. {$defenderCreature->name}: {$defender['hp']} HP.{$suffix}");
     }
 
     /**

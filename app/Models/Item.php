@@ -87,6 +87,10 @@ class Item extends Model
 
     public const DEFENSE_BONUS_KEYS = ['defense', 'armor'];
 
+    public const DAMAGE_SLOT_KEYS = ['primary-weapon', 'secondary-weapon', 'front-limbs'];
+
+    public const DEFENSE_SLOT_KEYS = ['body', 'defense'];
+
     /**
      * @return BelongsTo<EquipmentSlot, $this>
      */
@@ -124,18 +128,121 @@ class Item extends Model
      */
     public function equipmentSlotKeys(): array
     {
-        $slotKeys = collect($this->slots_required ?? [])
-            ->filter(fn (mixed $slotKey): bool => is_string($slotKey) && $slotKey !== '')
-            ->values();
+        $slotKeys = collect(self::normalizeSlotKeys($this->slots_required ?? []));
 
         if ($slotKeys->isEmpty() && $this->slot_key) {
-            $slotKeys->push($this->slot_key);
+            $slotKeys->push(self::normalizeSlotKey($this->slot_key));
         }
 
         return $slotKeys
+            ->filter()
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function normalizeSlotKeys(mixed $slots): array
+    {
+        $singleSlotKey = self::normalizeSlotKey($slots);
+
+        if ($singleSlotKey) {
+            return [$singleSlotKey];
+        }
+
+        if (! is_iterable($slots)) {
+            return [];
+        }
+
+        return collect($slots)
+            ->map(fn (mixed $slot): ?string => self::normalizeSlotKey($slot))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public static function normalizeSlotKey(mixed $slot): ?string
+    {
+        if ($slot instanceof EquipmentSlot) {
+            return $slot->code;
+        }
+
+        if (is_array($slot)) {
+            $code = $slot['code'] ?? null;
+
+            return is_string($code) && $code !== '' ? $code : null;
+        }
+
+        if (is_object($slot)) {
+            $code = $slot->code ?? null;
+
+            return is_string($code) && $code !== '' ? $code : null;
+        }
+
+        if (! is_string($slot)) {
+            return null;
+        }
+
+        $slot = trim($slot);
+
+        if ($slot === '') {
+            return null;
+        }
+
+        $decoded = json_decode($slot, true);
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $decodedSlot = self::normalizeSlotKey($decoded);
+
+            if ($decodedSlot) {
+                return $decodedSlot;
+            }
+
+            if (is_iterable($decoded)) {
+                return collect($decoded)
+                    ->map(fn (mixed $nestedSlot): ?string => self::normalizeSlotKey($nestedSlot))
+                    ->filter()
+                    ->first();
+            }
+
+            return null;
+        }
+
+        return $slot;
+    }
+
+    public function equipmentSlotSummary(): ?string
+    {
+        $slotKeys = $this->equipmentSlotKeys();
+
+        if ($slotKeys === []) {
+            return null;
+        }
+
+        $names = EquipmentSlot::query()
+            ->whereIn('code', $slotKeys)
+            ->pluck('name', 'code');
+
+        return collect($slotKeys)
+            ->map(fn (string $slotKey): string => $names[$slotKey] ?? $slotKey)
+            ->join(', ');
+    }
+
+    public function requiresDamageBonus(): bool
+    {
+        return collect($this->equipmentSlotKeys())
+            ->intersect(self::DAMAGE_SLOT_KEYS)
+            ->isNotEmpty();
+    }
+
+    public function requiresDefenseBonus(): bool
+    {
+        return collect($this->equipmentSlotKeys())
+            ->intersect(self::DEFENSE_SLOT_KEYS)
+            ->isNotEmpty();
     }
 
     public function canBeUsedBy(Creature $creature): bool
