@@ -95,10 +95,11 @@ const setupBattleRealtime = () => {
     const participantsPanel = container.querySelector('[data-battle-participants]');
     const eventsPanel = container.querySelector('[data-battle-events]');
     const chatPanel = container.querySelector('[data-battle-chat]');
+    const equipmentMapPanel = container.querySelector('[data-battle-equipment-map]');
     const visualizerElement = container.querySelector('[data-battle-visualizer]');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-    if (!stateUrl || !actionPanel || !participantsPanel || !eventsPanel || !chatPanel) {
+    if (!stateUrl || !actionPanel || !participantsPanel || !eventsPanel || !chatPanel || !equipmentMapPanel) {
         return;
     }
 
@@ -152,6 +153,7 @@ const setupBattleRealtime = () => {
             participantsPanel.innerHTML = state.fragments.participants_html ?? '';
             eventsPanel.innerHTML = state.fragments.events_html ?? '';
             chatPanel.innerHTML = state.fragments.chat_html ?? '';
+            equipmentMapPanel.innerHTML = state.fragments.equipment_map_html ?? '';
         }
 
         visualizerElement?.battleVisualizer?.applyState(state);

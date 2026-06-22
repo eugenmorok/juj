@@ -6,11 +6,16 @@ use App\Models\ArenaSetting;
 use App\Models\Battle;
 use App\Models\BattleParticipant;
 use App\Models\Creature;
+use App\Models\Inventory;
+use App\Models\ItemInstance;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class BattleRewardService
 {
+    private const TROPHY_DROP_CHANCE_PERCENT = 5;
+
     public function __construct(
         private readonly PlayerProgressService $playerProgress,
     ) {}
@@ -27,6 +32,10 @@ class BattleRewardService
             }
 
             $settings = ArenaSetting::current();
+
+            if ($battle->events()->where('event_type', 'rewards_applied')->exists()) {
+                return $battle;
+            }
 
             if ($battle->participants->contains(fn (BattleParticipant $participant): bool => $participant->reward_xp > 0 || $participant->reward_player_xp > 0 || $participant->reward_tokens > 0 || $participant->reward_development_points > 0 || $participant->reward_creation_points > 0)) {
                 return $battle;
@@ -88,7 +97,9 @@ class BattleRewardService
                 ])->save();
             }
 
-            $this->rewardEvent($battle->refresh()->load('participants.creature'));
+            $trophy = $this->tryAwardTrophy($battle->refresh(), $participants);
+
+            $this->rewardEvent($battle->refresh()->load('participants.creature'), $trophy);
 
             return $battle->load(['participants.creature.user', 'events']);
         });
@@ -204,7 +215,7 @@ class BattleRewardService
         ])->save();
     }
 
-    private function rewardEvent(Battle $battle): void
+    private function rewardEvent(Battle $battle, ?array $trophy = null): void
     {
         $lines = $battle->participants
             ->map(function (BattleParticipant $participant): string {
@@ -217,27 +228,190 @@ class BattleRewardService
             })
             ->implode(' ');
 
+        $trophyText = $this->trophyText($trophy);
+        $payload = [
+            'participants' => $battle->participants
+                ->map(fn (BattleParticipant $participant): array => [
+                    'creature_id' => $participant->creature_id,
+                    'reward_xp' => $participant->reward_xp,
+                    'reward_player_xp' => $participant->reward_player_xp,
+                    'reward_tokens' => $participant->reward_tokens,
+                    'reward_development_points' => $participant->reward_development_points,
+                    'reward_creation_points' => $participant->reward_creation_points,
+                    'reward_doctrine_points' => $this->rewardDoctrinePoints($participant),
+                    'reward_perk_points' => $this->rewardPerkPoints($participant),
+                    'reward_multiplier' => $participant->reward_multiplier,
+                ])
+                ->values()
+                ->all(),
+        ];
+
+        if ($trophy !== null) {
+            $payload['trophy'] = $trophy;
+        }
+
         $battle->events()->create([
             'round' => 99,
             'event_type' => 'rewards_applied',
-            'payload' => [
-                'participants' => $battle->participants
-                    ->map(fn (BattleParticipant $participant): array => [
-                        'creature_id' => $participant->creature_id,
-                        'reward_xp' => $participant->reward_xp,
-                        'reward_player_xp' => $participant->reward_player_xp,
-                        'reward_tokens' => $participant->reward_tokens,
-                        'reward_development_points' => $participant->reward_development_points,
-                        'reward_creation_points' => $participant->reward_creation_points,
-                        'reward_doctrine_points' => $this->rewardDoctrinePoints($participant),
-                        'reward_perk_points' => $this->rewardPerkPoints($participant),
-                        'reward_multiplier' => $participant->reward_multiplier,
-                    ])
-                    ->values()
-                    ->all(),
-            ],
-            'text_log' => 'Награды начислены. '.$lines,
+            'payload' => $payload,
+            'text_log' => 'Награды начислены. '.$lines.$trophyText,
         ]);
+    }
+
+    /**
+     * @param  Collection<int, BattleParticipant>  $participants
+     * @return array<string, mixed>|null
+     */
+    private function tryAwardTrophy(Battle $battle, Collection $participants): ?array
+    {
+        if ($battle->is_draw) {
+            return null;
+        }
+
+        $winner = $participants->firstWhere('result', BattleParticipant::RESULT_WIN)
+            ?? $participants->firstWhere('creature_id', $battle->winner_creature_id);
+        $loser = $participants->firstWhere('result', BattleParticipant::RESULT_LOSS)
+            ?? $participants->first(fn (BattleParticipant $participant): bool => $participant->id !== $winner?->id);
+
+        if (! $winner || ! $loser || ! $winner->creature_id || ! $loser->creature_id) {
+            return null;
+        }
+
+        $roll = $this->trophyRoll($battle, $winner, $loser);
+
+        if ($roll > self::TROPHY_DROP_CHANCE_PERCENT) {
+            return null;
+        }
+
+        $winnerCreature = Creature::query()
+            ->whereKey($winner->creature_id)
+            ->lockForUpdate()
+            ->firstOrFail();
+        $winnerInventory = Inventory::forCreature($winnerCreature)->load('inventoryItems');
+
+        if (! $winnerInventory->hasFreeSlot()) {
+            return [
+                'awarded' => false,
+                'reason' => 'winner_inventory_full',
+                'roll' => $roll,
+                'chance_percent' => self::TROPHY_DROP_CHANCE_PERCENT,
+                'winner_creature_id' => $winner->creature_id,
+                'loser_creature_id' => $loser->creature_id,
+            ];
+        }
+
+        $candidates = $this->loserTrophyCandidates($loser);
+
+        if ($candidates->isEmpty()) {
+            return [
+                'awarded' => false,
+                'reason' => 'loser_has_no_items',
+                'roll' => $roll,
+                'chance_percent' => self::TROPHY_DROP_CHANCE_PERCENT,
+                'winner_creature_id' => $winner->creature_id,
+                'loser_creature_id' => $loser->creature_id,
+            ];
+        }
+
+        /** @var ItemInstance $itemInstance */
+        $itemInstance = $candidates[$this->trophyIndex($battle, $winner, $loser, $candidates->count())];
+        $slotKeys = $itemInstance->equipmentRows
+            ->where('creature_id', $loser->creature_id)
+            ->pluck('slot_key')
+            ->values()
+            ->all();
+
+        $itemInstance->equipmentRows()
+            ->where('creature_id', $loser->creature_id)
+            ->delete();
+        $itemInstance->inventoryItem?->delete();
+
+        $inventoryItem = $winnerInventory->addItemInstance($itemInstance);
+
+        return [
+            'awarded' => true,
+            'roll' => $roll,
+            'chance_percent' => self::TROPHY_DROP_CHANCE_PERCENT,
+            'winner_creature_id' => $winner->creature_id,
+            'winner_creature_name' => $winnerCreature->name,
+            'loser_creature_id' => $loser->creature_id,
+            'item_instance_id' => $itemInstance->id,
+            'item_id' => $itemInstance->item_id,
+            'item_name' => $itemInstance->item?->name,
+            'source_slot_keys' => $slotKeys,
+            'inventory_item_id' => $inventoryItem->id,
+            'inventory_slot_number' => $inventoryItem->slot_number,
+        ];
+    }
+
+    /**
+     * @return Collection<int, ItemInstance>
+     */
+    private function loserTrophyCandidates(BattleParticipant $loser): Collection
+    {
+        return ItemInstance::query()
+            ->with(['item', 'inventoryItem.inventory', 'equipmentRows.slot'])
+            ->whereIn('state', ['stored', 'equipped'])
+            ->where('bound_creature_id', $loser->creature_id)
+            ->where(function ($query) use ($loser): void {
+                $query
+                    ->whereHas('equipmentRows', fn ($equipment) => $equipment->where('creature_id', $loser->creature_id))
+                    ->orWhereHas('inventoryItem.inventory', fn ($inventory) => $inventory
+                        ->where('inventory_type', Inventory::TYPE_CREATURE)
+                        ->where('creature_id', $loser->creature_id));
+            })
+            ->orderBy('id')
+            ->get()
+            ->values();
+    }
+
+    private function trophyRoll(Battle $battle, BattleParticipant $winner, BattleParticipant $loser): int
+    {
+        return $this->deterministicNumber($battle, $winner, $loser, 'trophy-roll', 100) + 1;
+    }
+
+    private function trophyIndex(Battle $battle, BattleParticipant $winner, BattleParticipant $loser, int $candidateCount): int
+    {
+        return $this->deterministicNumber($battle, $winner, $loser, 'trophy-item', $candidateCount);
+    }
+
+    private function deterministicNumber(Battle $battle, BattleParticipant $winner, BattleParticipant $loser, string $salt, int $modulo): int
+    {
+        $hash = sprintf('%u', crc32(implode('|', [
+            $battle->seed,
+            $battle->id,
+            $winner->id,
+            $winner->creature_id,
+            $loser->id,
+            $loser->creature_id,
+            $salt,
+        ])));
+
+        return ((int) $hash) % max(1, $modulo);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $trophy
+     */
+    private function trophyText(?array $trophy): string
+    {
+        if ($trophy === null) {
+            return '';
+        }
+
+        if (($trophy['awarded'] ?? false) === true) {
+            return ' Трофей круга: '.$trophy['winner_creature_name'].' получает предмет «'.$trophy['item_name'].'» в ячейку '.$trophy['inventory_slot_number'].'.';
+        }
+
+        if (($trophy['reason'] ?? null) === 'winner_inventory_full') {
+            return ' Трофей круга выпал, но инвентарь победителя заполнен.';
+        }
+
+        if (($trophy['reason'] ?? null) === 'loser_has_no_items') {
+            return ' Трофей круга выпал, но у проигравшего не нашлось переносимых предметов.';
+        }
+
+        return '';
     }
 
     private function rewardDoctrinePoints(BattleParticipant $participant): int

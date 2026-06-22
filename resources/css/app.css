@@ -1087,6 +1087,401 @@ textarea {
     }
 }
 
+.battle-equipment-maps {
+    border-color: var(--arena-border);
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--arena-accent) 7%, transparent), transparent 42%),
+        var(--arena-panel);
+    color: var(--arena-text);
+    box-shadow: var(--arena-shadow);
+}
+
+.battle-equipment-maps__header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.battle-equipment-maps__header h2,
+.battle-equipment-card__title h3,
+.battle-equipment-tooltip h4 {
+    color: var(--arena-text);
+}
+
+.battle-equipment-maps__header p,
+.battle-equipment-card__title p,
+.battle-equipment-tooltip__slot,
+.battle-equipment-card__legend {
+    color: var(--arena-text-soft);
+}
+
+.battle-equipment-maps__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.75rem, 1.2vw, 1rem);
+}
+
+.battle-equipment-card {
+    min-width: 0;
+    border: 1px solid var(--arena-border-soft);
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--arena-panel-strong) 90%, transparent);
+    padding: 0.8rem;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--arena-text) 6%, transparent);
+}
+
+.battle-equipment-card__title {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.battle-equipment-card__title h3 {
+    margin-top: 0.15rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.battle-equipment-card__title span {
+    flex: none;
+    border: 1px solid var(--arena-border-soft);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--arena-accent) 10%, transparent);
+    color: var(--arena-accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.35rem 0.55rem;
+}
+
+.battle-equipment-card__body {
+    position: relative;
+    min-height: 23rem;
+    margin-top: 0.8rem;
+    overflow: visible;
+    border: 1px solid var(--arena-border-soft);
+    border-radius: 0.5rem;
+    background:
+        radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--arena-accent) 18%, transparent), transparent 24%),
+        radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--arena-danger) 10%, transparent), transparent 34%),
+        color-mix(in srgb, var(--arena-bg) 52%, var(--arena-panel-strong));
+}
+
+.battle-equipment-silhouette {
+    position: absolute;
+    inset: 1.2rem 2rem;
+    pointer-events: none;
+    opacity: 0.82;
+}
+
+.battle-equipment-silhouette span {
+    position: absolute;
+    display: block;
+    border: 1px solid color-mix(in srgb, var(--arena-accent) 45%, var(--arena-border-soft));
+    background: color-mix(in srgb, var(--arena-accent) 12%, var(--arena-panel));
+    box-shadow:
+        inset 0 0 1.5rem color-mix(in srgb, var(--arena-accent) 16%, transparent),
+        0 0 1.2rem color-mix(in srgb, var(--arena-accent) 10%, transparent);
+}
+
+.battle-equipment-silhouette__head {
+    top: 5%;
+    left: 50%;
+    width: 4.1rem;
+    height: 4.1rem;
+    transform: translateX(-50%);
+    border-radius: 999px;
+}
+
+.battle-equipment-silhouette__body {
+    top: 24%;
+    left: 50%;
+    width: 6.4rem;
+    height: 9.8rem;
+    transform: translateX(-50%);
+    border-radius: 42% 42% 34% 34%;
+}
+
+.battle-equipment-silhouette__limb {
+    width: 2.2rem;
+    height: 7.2rem;
+    border-radius: 999px;
+}
+
+.battle-equipment-silhouette__limb--front-left {
+    top: 33%;
+    left: calc(50% - 5.2rem);
+    transform: rotate(15deg);
+}
+
+.battle-equipment-silhouette__limb--front-right {
+    top: 33%;
+    right: calc(50% - 5.2rem);
+    transform: rotate(-15deg);
+}
+
+.battle-equipment-silhouette__limb--rear-left {
+    top: 66%;
+    left: calc(50% - 3.8rem);
+    transform: rotate(8deg);
+}
+
+.battle-equipment-silhouette__limb--rear-right {
+    top: 66%;
+    right: calc(50% - 3.8rem);
+    transform: rotate(-8deg);
+}
+
+.battle-equipment-slot {
+    position: absolute;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    transform: translate(-50%, -50%);
+    cursor: help;
+    border: 1px solid var(--arena-border-soft);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--arena-panel) 82%, transparent);
+    color: var(--arena-text-soft);
+    outline: none;
+    transition:
+        border-color 0.15s ease,
+        background 0.15s ease,
+        box-shadow 0.15s ease,
+        color 0.15s ease;
+}
+
+.battle-equipment-slot.is-equipped {
+    border-color: color-mix(in srgb, var(--arena-accent) 65%, var(--arena-border-soft));
+    background:
+        radial-gradient(circle at 35% 28%, color-mix(in srgb, #ffffff 20%, transparent), transparent 28%),
+        color-mix(in srgb, var(--arena-accent) 22%, var(--arena-panel-strong));
+    color: var(--arena-text);
+    box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--arena-accent) 13%, transparent),
+        0 0 1rem color-mix(in srgb, var(--arena-accent) 17%, transparent);
+}
+
+.battle-equipment-slot:hover,
+.battle-equipment-slot:focus-visible {
+    z-index: 8;
+    border-color: var(--arena-accent);
+    background: color-mix(in srgb, var(--arena-accent) 28%, var(--arena-panel-strong));
+    color: var(--arena-text);
+}
+
+.battle-equipment-slot__mark {
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.battle-equipment-slot__name {
+    position: absolute;
+    top: calc(100% + 0.18rem);
+    left: 50%;
+    width: 7.5rem;
+    transform: translateX(-50%);
+    color: var(--arena-text-soft);
+    font-size: 0.56rem;
+    line-height: 1.1;
+    text-align: center;
+}
+
+.battle-equipment-slot--head {
+    top: 17%;
+    left: 50%;
+}
+
+.battle-equipment-slot--body {
+    top: 44%;
+    left: 50%;
+}
+
+.battle-equipment-slot--front-limbs {
+    top: 45%;
+    left: 28%;
+}
+
+.battle-equipment-slot--rear-limbs {
+    top: 79%;
+    left: 50%;
+}
+
+.battle-equipment-slot--primary-weapon {
+    top: 45%;
+    left: 78%;
+}
+
+.battle-equipment-slot--secondary-weapon {
+    top: 68%;
+    left: 76%;
+}
+
+.battle-equipment-slot--defense {
+    top: 58%;
+    left: 24%;
+}
+
+.battle-equipment-slot--neural {
+    top: 8%;
+    left: 50%;
+}
+
+.battle-equipment-slot--artifact {
+    top: 73%;
+    left: 25%;
+}
+
+.battle-equipment-slot--accessory {
+    top: 23%;
+    left: 76%;
+}
+
+.battle-equipment-tooltip {
+    position: absolute;
+    bottom: calc(100% + 0.6rem);
+    left: 50%;
+    z-index: 20;
+    width: min(19rem, 74vw);
+    max-height: 28rem;
+    overflow-y: auto;
+    transform: translate(-50%, 0.3rem);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    border: 1px solid var(--arena-border);
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--arena-panel-strong) 96%, #000000 4%);
+    box-shadow: 0 1.25rem 3rem color-mix(in srgb, #000000 38%, transparent);
+    color: var(--arena-text);
+    padding: 0.8rem;
+    text-align: left;
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease,
+        visibility 0.15s ease;
+}
+
+.battle-equipment-slot:hover .battle-equipment-tooltip,
+.battle-equipment-slot:focus-visible .battle-equipment-tooltip,
+.battle-equipment-slot:focus-within .battle-equipment-tooltip {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+}
+
+.battle-equipment-slot--front-limbs .battle-equipment-tooltip,
+.battle-equipment-slot--defense .battle-equipment-tooltip,
+.battle-equipment-slot--artifact .battle-equipment-tooltip {
+    left: 0;
+    transform: translate(0, 0.3rem);
+}
+
+.battle-equipment-slot--front-limbs:hover .battle-equipment-tooltip,
+.battle-equipment-slot--front-limbs:focus-visible .battle-equipment-tooltip,
+.battle-equipment-slot--front-limbs:focus-within .battle-equipment-tooltip,
+.battle-equipment-slot--defense:hover .battle-equipment-tooltip,
+.battle-equipment-slot--defense:focus-visible .battle-equipment-tooltip,
+.battle-equipment-slot--defense:focus-within .battle-equipment-tooltip,
+.battle-equipment-slot--artifact:hover .battle-equipment-tooltip,
+.battle-equipment-slot--artifact:focus-visible .battle-equipment-tooltip,
+.battle-equipment-slot--artifact:focus-within .battle-equipment-tooltip {
+    transform: translate(0, 0);
+}
+
+.battle-equipment-slot--primary-weapon .battle-equipment-tooltip,
+.battle-equipment-slot--secondary-weapon .battle-equipment-tooltip,
+.battle-equipment-slot--accessory .battle-equipment-tooltip {
+    right: 0;
+    left: auto;
+    transform: translate(0, 0.3rem);
+}
+
+.battle-equipment-slot--primary-weapon:hover .battle-equipment-tooltip,
+.battle-equipment-slot--primary-weapon:focus-visible .battle-equipment-tooltip,
+.battle-equipment-slot--primary-weapon:focus-within .battle-equipment-tooltip,
+.battle-equipment-slot--secondary-weapon:hover .battle-equipment-tooltip,
+.battle-equipment-slot--secondary-weapon:focus-visible .battle-equipment-tooltip,
+.battle-equipment-slot--secondary-weapon:focus-within .battle-equipment-tooltip,
+.battle-equipment-slot--accessory:hover .battle-equipment-tooltip,
+.battle-equipment-slot--accessory:focus-visible .battle-equipment-tooltip,
+.battle-equipment-slot--accessory:focus-within .battle-equipment-tooltip {
+    transform: translate(0, 0);
+}
+
+.battle-equipment-tooltip__slot {
+    margin-bottom: 0.25rem;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.battle-equipment-tooltip h4 {
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+.battle-equipment-card__legend {
+    display: flex;
+    min-height: 1.6rem;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.65rem;
+    font-size: 0.72rem;
+}
+
+.battle-equipment-card__legend span {
+    border: 1px solid var(--arena-border-soft);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--arena-panel) 82%, transparent);
+    padding: 0.18rem 0.45rem;
+}
+
+[data-theme='light'] .battle-equipment-tooltip {
+    background: #fffaf0;
+    box-shadow: 0 1.25rem 3rem rgba(88, 64, 24, 0.2);
+}
+
+[data-theme='light'] .battle-equipment-card__body {
+    background:
+        radial-gradient(circle at 50% 28%, color-mix(in srgb, var(--arena-accent) 14%, transparent), transparent 24%),
+        radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--arena-danger) 8%, transparent), transparent 34%),
+        #fff7df;
+}
+
+@media (max-width: 1100px) {
+    .battle-equipment-maps__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .battle-equipment-maps__header {
+        align-items: start;
+        flex-direction: column;
+    }
+
+    .battle-equipment-card__body {
+        min-height: 21rem;
+    }
+
+    .battle-equipment-slot {
+        width: 2.45rem;
+        height: 2.45rem;
+    }
+
+    .battle-equipment-slot__name {
+        display: none;
+    }
+}
+
 .item-details {
     color: var(--arena-text);
 }

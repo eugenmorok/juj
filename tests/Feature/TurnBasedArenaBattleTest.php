@@ -11,8 +11,10 @@ use App\Models\BattleParticipant;
 use App\Models\BattleRound;
 use App\Models\BotProfile;
 use App\Models\Creature;
+use App\Models\CreatureEquipment;
 use App\Models\CreatureSpecies;
 use App\Models\CreatureType;
+use App\Models\EquipmentSlot;
 use App\Models\Inventory;
 use App\Models\Item;
 use App\Models\ItemInstance;
@@ -118,6 +120,61 @@ class TurnBasedArenaBattleTest extends TestCase
             ->assertDontSee('Рџ', false)
             ->assertDontSee('Р ', false)
             ->assertDontSee('РЎ', false);
+    }
+
+    public function test_interactive_battle_page_shows_equipment_map_for_player_and_bot(): void
+    {
+        [$type, $species] = $this->catalog();
+        $user = User::factory()->create();
+        $botProfile = BotProfile::factory()->create(['style' => 'balanced']);
+        $creature = $this->creatureFor($user, $type, $species, ['name' => 'Cartographer']);
+        $botCreature = $this->creatureFor($botProfile->user, $type, $species, ['name' => 'Armored Bot']);
+        $weaponSlot = EquipmentSlot::factory()->create([
+            'code' => 'primary-weapon',
+            'name' => 'Основное оружие / клыки / жало',
+            'sort_order' => 50,
+        ]);
+        $defenseSlot = EquipmentSlot::factory()->create([
+            'code' => 'defense',
+            'name' => 'Защита / панцирь / щит',
+            'sort_order' => 70,
+        ]);
+        $weapon = Item::factory()->create([
+            'name' => 'Громовой клык',
+            'description' => 'Главное оружие для проверки схемы.',
+            'slot_key' => $weaponSlot->code,
+            'slots_required' => [$weaponSlot->code],
+            'bonuses' => ['damage' => 7],
+        ]);
+        $shield = Item::factory()->create([
+            'name' => 'Бронещит бота',
+            'description' => 'Панцирь, видимый игроку на арене.',
+            'slot_key' => $defenseSlot->code,
+            'slots_required' => [$defenseSlot->code],
+            'bonuses' => ['defense' => 4],
+        ]);
+
+        $this->equipItem($creature, $weaponSlot, $weapon);
+        $this->equipItem($botCreature, $defenseSlot, $shield);
+
+        $battle = app(InteractiveBattleService::class)->start($creature, $botCreature, $user);
+
+        $this->actingAs($user)
+            ->get(route('arena.battles.show', $battle))
+            ->assertOk()
+            ->assertSeeText('Схема экипировки участников')
+            ->assertSeeText('Cartographer')
+            ->assertSeeText('Armored Bot')
+            ->assertSeeText('Громовой клык')
+            ->assertSeeText('Бронещит бота')
+            ->assertSeeText('Главное оружие для проверки схемы.')
+            ->assertSeeText('Панцирь, видимый игроку на арене.')
+            ->assertSeeText('Основное оружие / клыки / жало')
+            ->assertSeeText('Защита / панцирь / щит')
+            ->assertSeeText('Урон')
+            ->assertSeeText('+7')
+            ->assertSeeText('Защита')
+            ->assertSeeText('+4');
     }
 
     public function test_real_players_submit_actions_before_round_is_resolved(): void
@@ -345,5 +402,23 @@ class TurnBasedArenaBattleTest extends TestCase
             'is_available_for_battle' => true,
             ...$attributes,
         ]);
+    }
+
+    private function equipItem(Creature $creature, EquipmentSlot $slot, Item $item): ItemInstance
+    {
+        $itemInstance = ItemInstance::factory()->create([
+            'item_id' => $item->id,
+            'owner_user_id' => $creature->user_id,
+            'bound_creature_id' => $creature->id,
+            'state' => 'equipped',
+        ]);
+
+        CreatureEquipment::query()->create([
+            'creature_id' => $creature->id,
+            'item_instance_id' => $itemInstance->id,
+            'slot_key' => $slot->code,
+        ]);
+
+        return $itemInstance;
     }
 }

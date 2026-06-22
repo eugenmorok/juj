@@ -233,6 +233,8 @@ class InteractiveBattleService
             'participants.creature.user',
             'participants.creature.type',
             'participants.creature.species',
+            'participants.creature.equipmentRows.slot',
+            'participants.creature.equipmentRows.itemInstance.item',
             'rounds.firstActor',
             'rounds.actions.creature',
             'rounds.actions.inventoryItem.itemInstance.item',
@@ -1267,6 +1269,7 @@ class InteractiveBattleService
             'participants_html' => view('game.battles.partials.participants-grid', $viewData)->render(),
             'events_html' => view('game.battles.partials.events-log', $viewData)->render(),
             'chat_html' => view('game.battles.partials.chat', $viewData)->render(),
+            'equipment_map_html' => view('game.battles.partials.equipment-map', $viewData)->render(),
         ];
     }
 

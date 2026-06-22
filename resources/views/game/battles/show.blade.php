@@ -92,5 +92,11 @@
                 'viewer' => $viewer ?? request()->user(),
             ])
         </div>
+
+        <div data-battle-equipment-map>
+            @include('game.battles.partials.equipment-map', [
+                'battle' => $battle,
+            ])
+        </div>
     </div>
 @endsection
