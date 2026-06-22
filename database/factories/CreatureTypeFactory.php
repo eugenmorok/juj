@@ -25,6 +25,7 @@ class CreatureTypeFactory extends Factory
             'icon' => null,
             'type_bonus' => null,
             'type_weakness' => null,
+            'creation_required_player_level' => 1,
             'is_active' => true,
         ];
     }

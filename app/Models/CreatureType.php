@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'icon',
     'type_bonus',
     'type_weakness',
+    'creation_required_player_level',
     'is_active',
 ])]
 class CreatureType extends Model
@@ -40,8 +41,19 @@ class CreatureType extends Model
         return [
             'type_bonus' => 'array',
             'type_weakness' => 'array',
+            'creation_required_player_level' => 'integer',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function creationRequiredPlayerLevel(): int
+    {
+        return max(1, (int) $this->creation_required_player_level);
+    }
+
+    public function isUnlockedFor(User $user): bool
+    {
+        return (int) $user->level >= $this->creationRequiredPlayerLevel();
     }
 
     #[Scope]

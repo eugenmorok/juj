@@ -9,7 +9,7 @@ use Illuminate\Database\Seeder;
 class CreatureCatalogSeeder extends Seeder
 {
     /**
-     * @var array<string, array{name: string, description: string}>
+     * @var array<string, array{name: string, description: string, creation_required_player_level?: int}>
      */
     private const TYPES = [
         'animals' => [
@@ -23,6 +23,11 @@ class CreatureCatalogSeeder extends Seeder
         'insects' => [
             'name' => 'Инсекты',
             'description' => 'Быстрые и опасные сущности, которые берут числом, ловкостью и ядами.',
+        ],
+        'reptiles' => [
+            'name' => 'Пресмыкающиеся',
+            'description' => 'Холоднокровные потомки Разлома: панцири, яд, терпение и древняя память болот, песков и руин.',
+            'creation_required_player_level' => 10,
         ],
     ];
 
@@ -45,6 +50,10 @@ class CreatureCatalogSeeder extends Seeder
         ['type' => 'insects', 'name' => 'Скорпион', 'code' => 'scorpion', 's' => 5, 'p' => 6, 'e' => 7, 'c' => 1, 'i' => 2, 'a' => 6, 'l' => 6],
         ['type' => 'insects', 'name' => 'Рой мух', 'code' => 'fly-swarm', 's' => 2, 'p' => 7, 'e' => 4, 'c' => 1, 'i' => 2, 'a' => 10, 'l' => 7],
         ['type' => 'insects', 'name' => 'Паук-охотник', 'code' => 'hunter-spider', 's' => 5, 'p' => 8, 'e' => 5, 'c' => 1, 'i' => 3, 'a' => 8, 'l' => 6],
+        ['type' => 'reptiles', 'name' => 'Ящер-разведчик', 'code' => 'monitor-lizard', 's' => 6, 'p' => 7, 'e' => 6, 'c' => 2, 'i' => 4, 'a' => 8, 'l' => 5, 'description' => 'Хладнокровный следопыт руин: быстрый, наблюдательный и достаточно крепкий для долгих переходов.'],
+        ['type' => 'reptiles', 'name' => 'Панцирная черепаха', 'code' => 'ironback-turtle', 's' => 6, 'p' => 4, 'e' => 10, 'c' => 2, 'i' => 3, 'a' => 2, 'l' => 5, 'description' => 'Медленный бастион с природной броней и упрямой живучестью.'],
+        ['type' => 'reptiles', 'name' => 'Болотный крокодил', 'code' => 'marsh-crocodile', 's' => 9, 'p' => 5, 'e' => 8, 'c' => 2, 'i' => 2, 'a' => 4, 'l' => 4, 'description' => 'Тяжёлый хищник мутных каналов, который решает бой силой челюстей и терпением засады.'],
+        ['type' => 'reptiles', 'name' => 'Песчаная гадюка', 'code' => 'sand-viper', 's' => 4, 'p' => 8, 'e' => 4, 'c' => 2, 'i' => 3, 'a' => 9, 'l' => 7, 'description' => 'Ядовитая дуэлянтка пустошей: редко держит удар, зато первой находит слабое место.'],
     ];
 
     public function run(): void
@@ -60,6 +69,7 @@ class CreatureCatalogSeeder extends Seeder
                 'icon' => null,
                 'type_bonus' => null,
                 'type_weakness' => null,
+                'creation_required_player_level' => $type['creation_required_player_level'] ?? 1,
                 'is_active' => true,
             ]);
         }
@@ -80,9 +90,14 @@ class CreatureCatalogSeeder extends Seeder
                 'servobot' => 'game-assets/creatures/mechanoid-servobot.webp',
                 'combat-module' => 'game-assets/creatures/mechanoid-combat-module.webp',
                 'repair-unit' => 'game-assets/creatures/mechanoid-repair-unit.webp',
+                'monitor-lizard' => 'game-assets/creatures/reptile-monitor-lizard.webp',
+                'ironback-turtle' => 'game-assets/creatures/reptile-ironback-turtle.webp',
+                'marsh-crocodile' => 'game-assets/creatures/reptile-marsh-crocodile.webp',
+                'sand-viper' => 'game-assets/creatures/reptile-sand-viper.webp',
                 default => match ($species['type']) {
                     'mechanoids' => 'game-assets/creatures/mechanoid.webp',
                     'insects' => 'game-assets/creatures/insect-mantis.webp',
+                    'reptiles' => 'game-assets/creatures/reptile-monitor-lizard.webp',
                     default => 'game-assets/creatures/animal-wolf.webp',
                 },
             };
@@ -92,7 +107,7 @@ class CreatureCatalogSeeder extends Seeder
             ], [
                 'creature_type_id' => $types[$species['type']]->id,
                 'name' => $species['name'],
-                'description' => 'Стартовый вид для создания первой сущности.',
+                'description' => $species['description'] ?? 'Стартовый вид для создания первой сущности.',
                 'portrait_image' => $battleImage,
                 'battle_image' => $battleImage,
                 'rarity' => 'common',

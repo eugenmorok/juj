@@ -37,15 +37,23 @@ class CreatureController extends Controller
 
     public function create(): View
     {
+        $user = auth()->user();
         $creatureTypes = CreatureType::query()
             ->active()
             ->whereHas('species', fn ($query) => $query->active()->starterAvailable())
             ->with(['species' => fn ($query) => $query->active()->starterAvailable()->orderBy('name')])
             ->orderBy('name')
             ->get();
+        $unlockedCreatureTypes = $creatureTypes
+            ->filter(fn (CreatureType $type): bool => $type->isUnlockedFor($user))
+            ->values();
+        $lockedCreatureTypes = $creatureTypes
+            ->reject(fn (CreatureType $type): bool => $type->isUnlockedFor($user))
+            ->values();
 
         return view('game.creatures.create', [
-            'creatureTypes' => $creatureTypes,
+            'creatureTypes' => $unlockedCreatureTypes,
+            'lockedCreatureTypes' => $lockedCreatureTypes,
             'starterSkills' => Skill::query()
                 ->active()
                 ->starterAvailable()
@@ -53,15 +61,16 @@ class CreatureController extends Controller
                 ->orderBy('cost')
                 ->orderBy('name')
                 ->get(),
-            'availableCreationPoints' => (int) auth()->user()->creature_creation_points,
+            'availableCreationPoints' => (int) $user->creature_creation_points,
             'creationCost' => User::CREATURE_CREATION_COST,
+            'playerLevel' => (int) $user->level,
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
         $attributes = $request->validate($this->creationRules(), $this->creationMessages());
-        $species = $this->starterSpecies((int) $attributes['creature_species_id']);
+        $species = $this->starterSpecies((int) $attributes['creature_species_id'], $request->user());
         $skillIds = $this->skillIds($attributes['skills'] ?? []);
         $skills = $this->starterSkills($skillIds);
         $special = $this->validatedSpecialValues($attributes, $species);
@@ -279,7 +288,7 @@ class CreatureController extends Controller
         return $messages;
     }
 
-    private function starterSpecies(int $speciesId): CreatureSpecies
+    private function starterSpecies(int $speciesId, User $user): CreatureSpecies
     {
         $species = CreatureSpecies::query()
             ->with('type')
@@ -288,6 +297,12 @@ class CreatureController extends Controller
         if (! $species->is_active || ! $species->is_starter_available || ! $species->type?->is_active) {
             throw ValidationException::withMessages([
                 'creature_species_id' => 'Выбранный вид недоступен для создания.',
+            ]);
+        }
+
+        if (! $species->type->isUnlockedFor($user)) {
+            throw ValidationException::withMessages([
+                'creature_species_id' => 'Тип «'.$species->type->name.'» открывается с '.$species->type->creationRequiredPlayerLevel().' уровня профиля игрока.',
             ]);
         }
 

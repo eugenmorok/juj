@@ -17,17 +17,22 @@ class CreatureCatalogTest extends TestCase
     {
         $this->seed(CreatureCatalogSeeder::class);
 
-        $this->assertSame(3, CreatureType::query()->count());
-        $this->assertSame(15, CreatureSpecies::query()->count());
+        $this->assertSame(4, CreatureType::query()->count());
+        $this->assertSame(19, CreatureSpecies::query()->count());
 
-        foreach (['Животные', 'Механоиды', 'Инсекты'] as $name) {
+        foreach (['Животные', 'Механоиды', 'Инсекты', 'Пресмыкающиеся'] as $name) {
             $this->assertDatabaseHas('creature_types', [
                 'name' => $name,
                 'is_active' => true,
             ]);
         }
 
-        foreach (['Волк', 'Медведь', 'Крыса-мутант', 'Дрон-разведчик', 'Паук-охотник'] as $name) {
+        $this->assertDatabaseHas('creature_types', [
+            'code' => 'reptiles',
+            'creation_required_player_level' => 10,
+        ]);
+
+        foreach (['Волк', 'Медведь', 'Крыса-мутант', 'Дрон-разведчик', 'Паук-охотник', 'Ящер-разведчик', 'Панцирная черепаха'] as $name) {
             $this->assertDatabaseHas('creature_species', [
                 'name' => $name,
                 'is_active' => true,
@@ -50,6 +55,10 @@ class CreatureCatalogTest extends TestCase
             'servobot' => 'game-assets/creatures/mechanoid-servobot.webp',
             'combat-module' => 'game-assets/creatures/mechanoid-combat-module.webp',
             'repair-unit' => 'game-assets/creatures/mechanoid-repair-unit.webp',
+            'monitor-lizard' => 'game-assets/creatures/reptile-monitor-lizard.webp',
+            'ironback-turtle' => 'game-assets/creatures/reptile-ironback-turtle.webp',
+            'marsh-crocodile' => 'game-assets/creatures/reptile-marsh-crocodile.webp',
+            'sand-viper' => 'game-assets/creatures/reptile-sand-viper.webp',
         ] as $code => $image) {
             $this->assertDatabaseHas('creature_species', [
                 'code' => $code,

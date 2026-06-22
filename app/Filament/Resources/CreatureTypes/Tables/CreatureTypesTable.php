@@ -29,6 +29,9 @@ class CreatureTypesTable
                     ->label('Видов')
                     ->counts('species')
                     ->sortable(),
+                TextColumn::make('creation_required_player_level')
+                    ->label('Создание с ур.')
+                    ->sortable(),
                 IconColumn::make('is_active')
                     ->label('Активен')
                     ->boolean(),

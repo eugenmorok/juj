@@ -44,6 +44,21 @@
             @endif
         </div>
 
+        @if ($lockedCreatureTypes->isNotEmpty())
+            <div class="rounded-md border border-cyan-500/30 bg-cyan-500/10 px-4 py-4 text-sm text-cyan-100">
+                <p class="font-semibold uppercase tracking-wide text-cyan-200">Скоро откроется новая ветвь</p>
+                <div class="mt-2 space-y-2">
+                    @foreach ($lockedCreatureTypes as $lockedType)
+                        <p>
+                            <span class="font-semibold text-white">{{ $lockedType->name }}</span>
+                            станут доступны для создания с {{ $lockedType->creationRequiredPlayerLevel() }} уровня профиля игрока.
+                            Сейчас у тебя {{ $playerLevel }} уровень.
+                        </p>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         @if ($speciesPayload->isEmpty())
             <div class="rounded-md border border-zinc-800 bg-zinc-900 p-8 text-center">
                 <h2 class="text-lg font-semibold text-white">Нет доступных стартовых видов</h2>

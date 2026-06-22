@@ -33,6 +33,13 @@ class CreatureTypeForm
                         Toggle::make('is_active')
                             ->label('Активен')
                             ->default(true),
+                        TextInput::make('creation_required_player_level')
+                            ->label('Уровень игрока для создания')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->default(1)
+                            ->required(),
                         Textarea::make('description')
                             ->label('Описание')
                             ->columnSpanFull(),

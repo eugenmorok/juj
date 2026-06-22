@@ -264,6 +264,69 @@ class CreatureCreationTest extends TestCase
             ->assertSessionHasErrors('creature_species_id');
     }
 
+    public function test_lower_level_player_sees_locked_reptile_announcement_without_species_options(): void
+    {
+        $user = User::factory()->create([
+            'level' => 9,
+        ]);
+        $normalSpecies = $this->starterSpecies([
+            'name' => 'Волк',
+        ]);
+        $lockedSpecies = $this->lockedReptileSpecies([
+            'name' => 'Ящер-разведчик',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('entities.create'))
+            ->assertOk()
+            ->assertSee($normalSpecies->name)
+            ->assertSee('Пресмыкающиеся')
+            ->assertSee('10 уровня профиля игрока')
+            ->assertSee('Сейчас у тебя 9 уровень')
+            ->assertDontSee($lockedSpecies->name);
+    }
+
+    public function test_lower_level_player_cannot_create_reptile_by_manual_post(): void
+    {
+        $user = User::factory()->create([
+            'level' => 9,
+        ]);
+        $species = $this->lockedReptileSpecies();
+
+        $this->actingAs($user)
+            ->from(route('entities.create'))
+            ->post(route('entities.store'), $this->creationPayload($species))
+            ->assertRedirect(route('entities.create', absolute: false))
+            ->assertSessionHasErrors('creature_species_id');
+
+        $this->assertDatabaseCount('creatures', 0);
+    }
+
+    public function test_level_ten_player_can_create_reptile(): void
+    {
+        $user = User::factory()->create([
+            'level' => 10,
+        ]);
+        $species = $this->lockedReptileSpecies([
+            'name' => 'Песчаная гадюка',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('entities.create'))
+            ->assertOk()
+            ->assertSee($species->name)
+            ->assertDontSee('Скоро откроется новая ветвь');
+
+        $this->actingAs($user)
+            ->post(route('entities.store'), $this->creationPayload($species))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $creature = Creature::query()->firstOrFail();
+
+        $this->assertSame($species->id, $creature->creature_species_id);
+    }
+
     public function test_player_cannot_buy_nonstarter_skill_during_creation(): void
     {
         $user = User::factory()->create();
@@ -279,6 +342,31 @@ class CreatureCreationTest extends TestCase
             ]))
             ->assertRedirect(route('entities.create', absolute: false))
             ->assertSessionHasErrors('skills');
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function lockedReptileSpecies(array $attributes = []): CreatureSpecies
+    {
+        return CreatureSpecies::factory()->create([
+            'creature_type_id' => CreatureType::factory()->create([
+                'name' => 'Пресмыкающиеся',
+                'code' => 'reptiles',
+                'is_active' => true,
+                'creation_required_player_level' => 10,
+            ])->id,
+            'base_strength' => 5,
+            'base_perception' => 5,
+            'base_endurance' => 5,
+            'base_charisma' => 5,
+            'base_intelligence' => 5,
+            'base_agility' => 5,
+            'base_luck' => 5,
+            'is_active' => true,
+            'is_starter_available' => true,
+            ...$attributes,
+        ]);
     }
 
     /**
