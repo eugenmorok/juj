@@ -56,7 +56,20 @@ git diff --check
 
 ### Осталось
 
-- После браузерной проверки — закоммитить, запушить и развернуть на production с запуском `CreatureCatalogSeeder`, чтобы новый тип появился в живой базе.
+- Основная задача завершена и развернута на production.
+- Под реальным игроком ниже 10 уровня можно визуально проверить `/entities/create`: должен быть только анонс `Пресмыкающихся`, без выбора их видов.
+- Под игроком 10+ на `/entities/create` должны быть доступны тип `Пресмыкающиеся` и 4 вида.
+
+### Production
+
+- Код опубликован коммитом `8c2a5f9` (`Add reptile creature type unlock`) и запушен в `main`.
+- Production `/var/www/rpg-arena` fast-forward обновлён до `8c2a5f9`.
+- Выполнены `composer install --no-dev --optimize-autoloader`, `php artisan optimize:clear`, `php artisan migrate --force`, `php artisan db:seed --class=CreatureCatalogSeeder --force`, `npm run build`, `config:cache`, `route:cache`, `view:cache`.
+- Миграция `2026_06_22_000002_add_creation_required_player_level_to_creature_types` применена.
+- Production БД: `Пресмыкающиеся|10|4`; виды: `marsh-crocodile`, `ironback-turtle`, `sand-viper`, `monitor-lizard`.
+- Новые ассеты `reptile-*.webp` отдаются nginx с HTTP 200 и `image/webp`.
+- `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны.
+- `http://176.108.254.117/login` возвращает HTTP 200.
 
 ## 2026-06-22 — компактное снаряжение в бою и уборка расходников
 
