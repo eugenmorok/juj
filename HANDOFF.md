@@ -59,7 +59,19 @@ git diff --check
 
 ### Осталось
 
-- Закоммитить, запушить и развернуть на production.
+- Основная задача завершена и опубликована.
+- Под реальным пользователем можно открыть свежий бой на production и проверить блок под чатом: две схемы экипировки, hover по занятым слотам и видимость предметов бота.
+
+### Production
+
+- Код опубликован коммитом `9c0581f` (`Add arena equipment map and trophy rewards`) и запушен в `main`.
+- Production `/var/www/rpg-arena` fast-forward обновлён до `9c0581f`.
+- `composer install --no-dev --optimize-autoloader`, `php artisan optimize:clear`, `php artisan migrate --force`, `npm run build`, `config:cache`, `route:cache`, `view:cache` выполнены успешно.
+- Новых миграций не было: `Nothing to migrate`.
+- Production build Vite успешен; остаётся прежний warning про `/game-assets/shop/merchant-hall.webp`.
+- `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны.
+- `http://176.108.254.117/login` возвращает HTTP 200.
+- `arena.battles.show` на production зарегистрирован.
 
 ## 2026-06-22 — предметы, слоты, яд, навыки и ремонт экипировки на проде
 
