@@ -55,14 +55,18 @@ git diff --check
 - `php artisan test` — 143 tests / 934 assertions, успешно.
 - `npm run build` — успешно; остаётся прежний warning Vite про `/game-assets/shop/merchant-hall.webp`.
 - `git diff --check` — успешно.
-- Коммит, push и production deploy ещё предстоит выполнить.
+- Кодовый коммит `d2e1a6a` (`Fix item combat bonuses and poison effects`) запушен в `main`.
+- Production `/var/www/rpg-arena` fast-forward обновлён до `d2e1a6a`; миграция `2026_06_22_000001_fix_item_slots_and_combat_bonuses` применена.
+- На production `venom-sting` содержит `damage: 3` и `poison_damage: 5`; `reinforced-hide-plate` содержит `defense: 2`; `auxiliary-cutter` создан в `secondary-weapon`.
+- На production у сущности `id=7` (`Gog`) расчёт экипировки показывает `damage.equipment = 3`, `defense.equipment = 2`; надеты `Усиленная бронепластина` и `Ядовитое жало` с нормализованными слотами.
+- На production для сущности `id=7` проверен `SkillCatalogService`: доступно 4 fallback-навыка.
+- `php8.4-fpm`, `rpg-arena-queue.service` и `nginx` активны; `/login` возвращает HTTP 200.
+- Production worktree очищен от старых untracked tinker-фрагментов; итоговый `git status --short --branch` чистый.
 
 ### Осталось
 
-- Прогнать полный тестовый набор и сборку.
-- Закоммитить изменения, запушить `main`.
-- Развернуть production, применить миграцию и проверить `/login`, сервисы и HEAD.
-- После деплоя желательно проверить на production `/entities/7/equipment` и `/shop` под реальным пользователем в браузере.
+- Основная задача завершена и развернута.
+- Под реальным пользователем можно визуально проверить `/entities/7/equipment`, `/shop` и ближайший бой с `Ядовитым жалом`.
 
 ## 2026-06-21 — читаемость магазина в светлой теме
 
